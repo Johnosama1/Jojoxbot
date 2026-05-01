@@ -25,6 +25,7 @@ router.post("/init", async (req, res) => {
       firstName: first_name || "",
       lastName: last_name || "",
       photoUrl: photo_url || null,
+      spins: 3,
     }).returning();
     res.json(user);
   } else {

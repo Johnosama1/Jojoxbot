@@ -72,6 +72,6 @@ export function getMockUser() {
     username: "testuser",
     first_name: "Test",
     last_name: "User",
-    photo_url: null,
+    photo_url: undefined as string | undefined,
   };
 }

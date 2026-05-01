@@ -2,6 +2,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserProvider } from "./lib/userContext";
 import TabBar from "./components/TabBar";
+import AnimatedBackground from "./components/AnimatedBackground";
 import HomePage from "./pages/HomePage";
 import TasksPage from "./pages/TasksPage";
 import ReferralPage from "./pages/ReferralPage";
@@ -29,6 +30,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <UserProvider>
+        <AnimatedBackground />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
         </WouterRouter>

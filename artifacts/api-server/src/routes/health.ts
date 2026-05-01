@@ -8,4 +8,10 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
+router.get("/config", (_req, res) => {
+  res.json({
+    botUsername: process.env.BOT_USERNAME || "jojoxbot",
+  });
+});
+
 export default router;

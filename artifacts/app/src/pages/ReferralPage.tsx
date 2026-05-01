@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
+import { api } from "../lib/api";
 import { Users, Copy, CheckCheck, Zap, Gift } from "lucide-react";
-
-const BOT_USERNAME = "Jojox_bot";
 
 export default function ReferralPage() {
   const { user } = useUser();
   const [copied, setCopied] = useState(false);
+  const [botUsername, setBotUsername] = useState("jojoxbot");
+
+  useEffect(() => {
+    api.getConfig().then(c => setBotUsername(c.botUsername)).catch(() => {});
+  }, []);
 
   const refLink = user
-    ? `https://t.me/${BOT_USERNAME}?start=ref_${user.id}`
+    ? `https://t.me/${botUsername}?start=ref_${user.id}`
     : "";
 
   const handleCopy = async () => {

@@ -25,15 +25,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const init = async () => {
     try {
       initTelegramApp();
-      let tgUser = getTelegramUser();
-      if (!tgUser) tgUser = getMockUser();
+      const tgUser = getTelegramUser() ?? getMockUser();
 
       const u = await api.initUser({
         id: tgUser.id,
-        username: tgUser.username,
-        first_name: tgUser.first_name,
-        last_name: tgUser.last_name,
-        photo_url: tgUser.photo_url || undefined,
+        username: tgUser.username ?? undefined,
+        first_name: tgUser.first_name ?? undefined,
+        last_name: tgUser.last_name ?? undefined,
+        photo_url: tgUser.photo_url ?? undefined,
       });
       setUser(u);
     } catch (e) {

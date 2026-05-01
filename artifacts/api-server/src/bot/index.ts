@@ -53,6 +53,7 @@ export function initBot() {
         firstName,
         lastName,
         referredBy: referredBy || null,
+        spins: 3,
       }).onConflictDoNothing().returning({ id: usersTable.id });
 
       if (inserted.length > 0 && referredBy) {
@@ -108,16 +109,37 @@ export function initBot() {
 
     if (!isOwner && adminRecord.length === 0) return;
 
+    // Auto-save owner telegram ID when owner uses /admin
+    if (isOwner) {
+      const existing = await db.select().from(botSettingsTable).where(eq(botSettingsTable.key, "owner_telegram_id")).limit(1);
+      if (existing.length === 0) {
+        await db.insert(botSettingsTable).values({ key: "owner_telegram_id", value: String(userId) });
+      } else {
+        await db.update(botSettingsTable).set({ value: String(userId) }).where(eq(botSettingsTable.key, "owner_telegram_id"));
+      }
+    }
+
     const MINI_APP_URL = process.env.MINI_APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}/app`;
 
     await bot.sendMessage(userId, "🔐 *لوحة التحكم*\nاختر من القائمة:", {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "⚙️ لوحة الأدمن", web_app: { url: `${MINI_APP_URL}?admin=1` } }],
+          [{ text: "⚙️ لوحة الأدمن", web_app: { url: `${MINI_APP_URL}/admin` } }],
         ],
       },
     });
+  });
+
+  bot.onText(/\/setowner/, async (msg) => {
+    const userId = msg.from!.id;
+    const username = msg.from?.username;
+    if (username !== OWNER_USERNAME) return;
+
+    await db.insert(botSettingsTable).values({ key: "owner_telegram_id", value: String(userId) })
+      .onConflictDoUpdate({ target: botSettingsTable.key, set: { value: String(userId) } });
+
+    await bot.sendMessage(userId, `✅ تم تسجيل ID الخاص بك كمالك البوت!\nID: \`${userId}\``, { parse_mode: "Markdown" });
   });
 
   logger.info("Telegram bot started");
