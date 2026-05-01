@@ -65,13 +65,31 @@ export function initBot() {
     }
 
     const MINI_APP_URL = process.env.MINI_APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}/app`;
+    const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
 
-    await bot.sendPhoto(chatId, "https://i.imgur.com/8Z4JAOL.png", {
-      caption: `🎰 *أهلاً بك في Jojox!*\n\n🎡 العب عجلة الحظ واربح TON\n🎁 ادعُ أصدقاءك واكسب لفات مجانية\n✅ أكمل المهام للحصول على مزيد من الجوائز\n\n💰 الجوائز تتراوح من 0.05 إلى 4 TON!`,
+    const isNew = existing.length === 0;
+    const greeting = isNew
+      ? `أهلاً ${firstName}! 🎉\nيسعدنا انضمامك لعائلة *JojoX*`
+      : `أهلاً مرحباً بعودتك ${firstName}! 👋`;
+
+    const welcomeText =
+      `${greeting}\n\n` +
+      `🎡 *عجلة الحظ تنتظرك!*\n` +
+      `دوّر العجلة واربح TON حقيقي كل يوم\n\n` +
+      `✨ *كيف تكسب أكثر؟*\n` +
+      `🔗 ادعُ أصدقاءك ← لفة مجانية لكل 5 أصدقاء\n` +
+      `✅ أكمل المهام اليومية ← لفات إضافية\n` +
+      `🎰 دوّر العجلة ← اربح من 0.05 إلى 5 TON!\n\n` +
+      `💎 *ابدأ الآن وجرّب حظك!*`;
+
+    await bot.sendMessage(chatId, welcomeText, {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [
           [{ text: "🎡 العب الآن", web_app: { url: MINI_APP_URL } }],
+          [
+            { text: "👥 شارك مع أصدقائك", url: `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}?start=ref_${userId}&text=🎰 العب عجلة الحظ واربح TON مجاناً!` },
+          ],
         ],
       },
     });
