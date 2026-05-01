@@ -29,6 +29,7 @@ export function initBot() {
   });
 
   bot.onText(/\/start(.*)/, async (msg, match) => {
+    try {
     const chatId = msg.chat.id;
     const userId = msg.from!.id;
     const username = msg.from?.username;
@@ -43,17 +44,18 @@ export function initBot() {
     }
 
     const existing = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const isNew = existing.length === 0;
 
-    if (existing.length === 0) {
-      await db.insert(usersTable).values({
+    if (isNew) {
+      const inserted = await db.insert(usersTable).values({
         id: userId,
         username: username || null,
         firstName,
         lastName,
         referredBy: referredBy || null,
-      });
+      }).onConflictDoNothing().returning({ id: usersTable.id });
 
-      if (referredBy) {
+      if (inserted.length > 0 && referredBy) {
         const refUser = await db.select().from(usersTable).where(eq(usersTable.id, referredBy)).limit(1);
         if (refUser.length > 0) {
           const newCount = (refUser[0].referralCount || 0) + 1;
@@ -67,7 +69,6 @@ export function initBot() {
     const MINI_APP_URL = process.env.MINI_APP_URL || `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}/app`;
     const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
 
-    const isNew = existing.length === 0;
     const greeting = isNew
       ? `أهلاً ${firstName}! 🎉\nيسعدنا انضمامك لعائلة *JojoX*`
       : `أهلاً مرحباً بعودتك ${firstName}! 👋`;
@@ -93,6 +94,9 @@ export function initBot() {
         ],
       },
     });
+    } catch (err) {
+      logger.error({ err }, "Error in /start handler");
+    }
   });
 
   bot.onText(/\/admin/, async (msg) => {
