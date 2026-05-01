@@ -1,21 +1,26 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import {
-  tasksTable,
-  userTasksTable,
-  usersTable,
-} from "@workspace/db/schema";
+import { tasksTable, userTasksTable, usersTable } from "@workspace/db/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { getBot } from "../bot";
+import { checkChannelMembership } from "../bot/admin";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+function extractChannelUsername(url: string | null): string | null {
+  if (!url) return null;
+  const m = url.match(/t\.me\/([A-Za-z0-9_]+)/);
+  return m ? m[1] : null;
+}
+
+router.get("/", async (_req, res) => {
   const now = new Date();
-  const tasks = await db.select().from(tasksTable).where(
-    eq(tasksTable.isActive, true)
-  );
-  const activeTasks = tasks.filter(t => !t.expiresAt || t.expiresAt > now);
-  res.json(activeTasks);
+  const tasks = await db
+    .select()
+    .from(tasksTable)
+    .where(eq(tasksTable.isActive, true));
+  const active = tasks.filter((t) => !t.expiresAt || t.expiresAt > now);
+  res.json(active);
 });
 
 router.post("/:taskId/complete", async (req, res) => {
@@ -27,7 +32,12 @@ router.post("/:taskId/complete", async (req, res) => {
     return;
   }
 
-  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId)).limit(1);
+  const [task] = await db
+    .select()
+    .from(tasksTable)
+    .where(eq(tasksTable.id, taskId))
+    .limit(1);
+
   if (!task || !task.isActive) {
     res.status(404).json({ error: "Task not found or inactive" });
     return;
@@ -38,7 +48,9 @@ router.post("/:taskId/complete", async (req, res) => {
     return;
   }
 
-  const existing = await db.select().from(userTasksTable)
+  const existing = await db
+    .select()
+    .from(userTasksTable)
     .where(and(eq(userTasksTable.userId, userId), eq(userTasksTable.taskId, taskId)))
     .limit(1);
 
@@ -47,26 +59,61 @@ router.post("/:taskId/complete", async (req, res) => {
     return;
   }
 
+  // Channel membership verification
+  const channelUsername = extractChannelUsername(task.url);
+  if (channelUsername) {
+    try {
+      const botInstance = getBot();
+      if (botInstance) {
+        const isMember = await checkChannelMembership(botInstance, userId, channelUsername);
+        if (!isMember) {
+          res.status(400).json({
+            error: `يجب الانضمام للقناة أولاً: @${channelUsername}`,
+          });
+          return;
+        }
+      }
+    } catch {
+      // If bot check fails, allow completion (don't block user)
+    }
+  }
+
   await db.insert(userTasksTable).values({ userId, taskId });
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
   if (user) {
     const newTasksCompleted = (user.tasksCompleted || 0) + 1;
-    let newSpins = user.spins;
-    if (newTasksCompleted % 5 === 0) newSpins += 1;
-    await db.update(usersTable)
-      .set({ tasksCompleted: newTasksCompleted, spins: newSpins })
+    const extraSpin = newTasksCompleted % 5 === 0 ? 1 : 0;
+    await db
+      .update(usersTable)
+      .set({
+        tasksCompleted: newTasksCompleted,
+        spins: sql`spins + ${extraSpin}`,
+      })
       .where(eq(usersTable.id, userId));
   }
 
-  const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [updated] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
   res.json({ success: true, user: updated });
 });
 
 router.get("/:userId/completed", async (req, res) => {
   const userId = parseInt(req.params.userId);
-  const completed = await db.select().from(userTasksTable).where(eq(userTasksTable.userId, userId));
-  res.json(completed.map(c => c.taskId));
+  const completed = await db
+    .select()
+    .from(userTasksTable)
+    .where(eq(userTasksTable.userId, userId));
+  res.json(completed.map((c) => c.taskId));
 });
 
 export default router;

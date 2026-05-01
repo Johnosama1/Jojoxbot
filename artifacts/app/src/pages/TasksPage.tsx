@@ -9,6 +9,7 @@ export default function TasksPage() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<number | null>(null);
+  const [urlOpened, setUrlOpened] = useState<Set<number>>(new Set());
   const [message, setMessage] = useState<{ taskId: number; text: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -20,22 +21,39 @@ export default function TasksPage() {
     });
   }, [user]);
 
-  const handleComplete = async (task: Task) => {
+  const handleOpenUrl = (task: Task) => {
+    window.open(task.url!, "_blank");
+    setUrlOpened((prev) => new Set([...prev, task.id]));
+  };
+
+  const handleVerify = async (task: Task) => {
     if (!user || completing !== null) return;
-    if (task.url) {
-      window.open(task.url, "_blank");
-    }
     setCompleting(task.id);
     try {
-      const result = await api.completeTask(task.id, user.id);
+      await api.completeTask(task.id, user.id);
       setCompleted((prev) => [...prev, task.id]);
-      setMessage({ taskId: task.id, text: "تم إكمال المهمة!", type: "success" });
+      setMessage({ taskId: task.id, text: "✅ تم إكمال المهمة! حصلت على مكافأتك", type: "success" });
       await refresh();
     } catch (e: unknown) {
       setMessage({ taskId: task.id, text: e instanceof Error ? e.message : "فشل", type: "error" });
     } finally {
       setCompleting(null);
-      setTimeout(() => setMessage(null), 3000);
+      setTimeout(() => setMessage(null), 4000);
+    }
+  };
+
+  const handleComplete = async (task: Task) => {
+    if (!user || completing !== null) return;
+    if (task.url) {
+      // Two-step: first open URL, then verify
+      if (!urlOpened.has(task.id)) {
+        handleOpenUrl(task);
+        return;
+      }
+      // Second click: verify
+      await handleVerify(task);
+    } else {
+      await handleVerify(task);
     }
   };
 

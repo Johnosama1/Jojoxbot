@@ -254,8 +254,12 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
 
     const segAngle = (2 * Math.PI) / slots.length;
     const targetSegAngle = winnerIndex * segAngle;
-    const extraSpins = (6 + Math.random()) * 2 * Math.PI;
-    const targetRotation = extraSpins + (2 * Math.PI - targetSegAngle) - segAngle / 2;
+    // Whole extra rotations ensure the pointer lands EXACTLY on the winner
+    const extraSpins = (6 + Math.floor(Math.random() * 4)) * 2 * Math.PI;
+    // Final resting angle (always lands winner at pointer)
+    const finalAngle = (2 * Math.PI - targetSegAngle) - segAngle / 2;
+    const startAngle = rotationRef.current % (2 * Math.PI);
+    const totalTravel = extraSpins + finalAngle - startAngle;
     const duration = 5000;
 
     spinStartRef.current = performance.now();
@@ -268,7 +272,7 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       glowFrameRef.current = frame;
 
       if (elapsed >= duration) {
-        rotationRef.current = targetRotation % (2 * Math.PI);
+        rotationRef.current = finalAngle;
         isSpinningRef.current = false;
         drawWheel(rotationRef.current, frame);
         onSpinEnd();
@@ -277,7 +281,7 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
 
       const t = elapsed / duration;
       const eased = 1 - Math.pow(1 - t, 4);
-      drawWheel(eased * targetRotation, frame);
+      drawWheel(startAngle + eased * totalTravel, frame);
       animFrameRef.current = requestAnimationFrame(animate);
     };
 

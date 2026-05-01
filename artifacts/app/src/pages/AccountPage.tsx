@@ -5,6 +5,11 @@ import { Wallet, Send, CheckCircle, History } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
 
+const TON_ADDRESS_REGEX = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
+function isValidTonAddress(addr: string): boolean {
+  return TON_ADDRESS_REGEX.test(addr.trim());
+}
+
 export default function AccountPage() {
   const { user, refresh } = useUser();
   const [walletAddress, setWalletAddress] = useState("");
@@ -33,6 +38,10 @@ export default function AccountPage() {
     }
     if (!walletAddress.trim()) {
       setError("أدخل عنوان المحفظة");
+      return;
+    }
+    if (!isValidTonAddress(walletAddress)) {
+      setError("عنوان المحفظة غير صحيح — يجب أن يبدأ بـ EQ أو UQ ويتكون من 48 حرفاً");
       return;
     }
 
