@@ -28,23 +28,25 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     fetch(`${API_BASE}/sticker/${id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Not ok");
-        const fmt = res.headers.get("X-Sticker-Format") ?? "";
-        if (cancelled) return;
 
-        if (fmt === "webm") {
+        // Use Content-Type (always CORS-safe) to detect format
+        // instead of a custom header that may be blocked by CORS
+        const ct = res.headers.get("Content-Type") ?? "";
+
+        if (ct.includes("video/webm")) {
           const buf = await res.arrayBuffer();
           if (cancelled) return;
           const blob = new Blob([buf], { type: "video/webm" });
           setVideoUrl(URL.createObjectURL(blob));
           setFormat("webm");
-        } else if (fmt === "lottie") {
-          // Server already decompressed TGS — just parse JSON
+        } else if (ct.includes("application/json")) {
+          // Server already decompressed TGS → plain Lottie JSON
           const json = await res.json();
           if (cancelled) return;
           setLottieData(json);
           setFormat("lottie");
         } else {
-          setFormat("failed");
+          if (!cancelled) setFormat("failed");
         }
       })
       .catch(() => { if (!cancelled) setFormat("failed"); });
@@ -52,12 +54,13 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     return () => { cancelled = true; };
   }, [id]);
 
+  // Mount lottie animation once container div exists in DOM
   useEffect(() => {
     if (format !== "lottie" || !lottieData || !containerRef.current) return;
     animRef.current?.destroy();
     animRef.current = lottie.loadAnimation({
       container: containerRef.current,
-      renderer: "svg",
+      renderer: "canvas",   // canvas is faster & more compatible on mobile
       loop: true,
       autoplay: true,
       animationData: lottieData,
@@ -100,6 +103,6 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     );
   }
 
-  // Loading → show fallback emoji until ready
+  // Loading → show fallback emoji until sticker is ready
   return fallbackEl;
 }
