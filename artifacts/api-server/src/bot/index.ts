@@ -145,25 +145,16 @@ export function initBot() {
         `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
       const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
 
-      // Escape HTML special chars from user-supplied content
-      const esc = (s: string) =>
-        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-      // Custom Telegram emoji helper
-      const ce = (id: string, fallback: string) =>
-        `<tg-emoji emoji-id="${id}">${fallback}</tg-emoji>`;
-
       const welcomeText =
-        `أهلاً، بيك في Jojox ${ce("5319007286004299794", "👋")}\n\n` +
-        `مرحباً يا ${esc(firstName)} في اسرع بوت ربح تون\n\n` +
-        `${ce("6131673419768403090", "✨")} كيف تكسب من البوت${ce("5436113877181941026", "❓")}\n\n` +
-        `${ce("6203840986443944067", "✅")} أكمل المهام ${ce("6131729520631223468", "⬅️")} لفات إضافية لكل ${ce("6203785577070858514", "5")} مهام\n\n` +
-        `${ce("6204118338252049831", "🔗")} ادعُ أصدقاءك ${ce("6131729520631223468", "⬅️")} لفة مجانية لكل ${ce("6203785577070858514", "5")} أصدقاء\n\n` +
-        `${ce("5104986024807760966", "🎰")} دوّر العجلة ${ce("6131729520631223468", "⬅️")} اربح من 0.05 إلى 4 TON!\n\n` +
-        `${ce("6129832240303051599", "🎁")} لديك ${ce("6203840986443944067", "3")} لفات مجانية للبدء!`;
+        `أهلاً، بيك في Jojox 👋\n\n` +
+        `مرحباً يا ${firstName} في اسرع بوت ربح تون\n\n` +
+        `✨ كيف تكسب من البوت❓\n\n` +
+        `✅ أكمل المهام ⬅️ لفات إضافية لكل 5 مهام\n\n` +
+        `🔗 ادعُ أصدقاءك ⬅️ لفة مجانية لكل 5 أصدقاء\n\n` +
+        `🎰 دوّر العجلة ⬅️ اربح من 0.05 إلى 4 TON!\n\n` +
+        `🎁 لديك 3 لفات مجانية للبدء!`;
 
       await bot.sendMessage(chatId, welcomeText, {
-        parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
             [{ text: "🎡 العب الآن", web_app: { url: MINI_APP_URL } }],
