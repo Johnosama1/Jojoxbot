@@ -9,18 +9,18 @@ interface WheelCanvasProps {
 }
 
 const SEGMENT_COLORS = [
-  { bg: "#3d0e6e", bgLight: "#5a1fa0", text: "#ffd700" },
-  { bg: "#1a0050", bgLight: "#2d0080", text: "#c9a0ff" },
-  { bg: "#4a0d7a", bgLight: "#6b1fa8", text: "#ffd700" },
-  { bg: "#160040", bgLight: "#280070", text: "#e0c0ff" },
-  { bg: "#3d0e6e", bgLight: "#5a1fa0", text: "#ffd700" },
-  { bg: "#1a0050", bgLight: "#2d0080", text: "#c9a0ff" },
-  { bg: "#4a0d7a", bgLight: "#6b1fa8", text: "#ffd700" },
-  { bg: "#160040", bgLight: "#280070", text: "#e0c0ff" },
-  { bg: "#3d0e6e", bgLight: "#5a1fa0", text: "#ffd700" },
-  { bg: "#1a0050", bgLight: "#2d0080", text: "#c9a0ff" },
-  { bg: "#4a0d7a", bgLight: "#6b1fa8", text: "#ffd700" },
-  { bg: "#160040", bgLight: "#280070", text: "#e0c0ff" },
+  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
+  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
+  { bg: "#0a6e1e", bgLight: "#19c93d", text: "#ffffff" },
+  { bg: "#0a3db5", bgLight: "#2563eb", text: "#ffffff" },
+  { bg: "#7c0fad", bgLight: "#b933e8", text: "#ffffff" },
+  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
+  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
+  { bg: "#0a6e1e", bgLight: "#19c93d", text: "#ffffff" },
+  { bg: "#0a3db5", bgLight: "#2563eb", text: "#ffffff" },
+  { bg: "#7c0fad", bgLight: "#b933e8", text: "#ffffff" },
+  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
+  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
 ];
 
 function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
@@ -110,13 +110,13 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       const gy = cy + Math.sin(midAngle) * outerR * 0.45;
       const grad = ctx.createRadialGradient(gx, gy, 0, cx, cy, outerR);
       grad.addColorStop(0, colors.bgLight);
-      grad.addColorStop(0.7, colors.bg);
-      grad.addColorStop(1, "#06001a");
+      grad.addColorStop(0.6, colors.bg);
+      grad.addColorStop(1, colors.bg);
       ctx.fillStyle = grad;
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(255,215,0,0.2)";
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.restore();
 
