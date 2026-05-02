@@ -32,7 +32,7 @@ export default function ReferralPage() {
   };
 
   const shareLink = () => {
-    const text = `🎰 العب عجلة الحظ في Jojox واربح TON!\n\n🎡 أربح من 0.05 إلى 4 TON في كل لفة\n🎁 انضم معي:\n${refLink}`;
+    const text = `🎰 العب عجلة الحظ في Jo-jokes واربح TON!\n\n🎡 أربح من 0.05 إلى 4 TON في كل لفة\n🎁 انضم معي:\n${refLink}`;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent(text)}`, "_blank");
   };
 

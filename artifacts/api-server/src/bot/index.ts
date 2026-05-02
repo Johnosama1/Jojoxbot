@@ -170,7 +170,7 @@ export function initBot() {
 
       const { text: welcomeText, entities: welcomeEntities } = buildMsg([
         { text: "👋", emojiId: "5319007286004299794" },
-        { text: ` أهلاً بيك في Jojox\n\n` },
+        { text: ` أهلاً بيك في Jo-jokes\n\n` },
         { text: "😀", emojiId: "6129832240303051599" },
         { text: ` مرحباً يا ${firstName} في أسرع بوت ربح TON\n\n` },
         { text: "✨", emojiId: "6131673419768403090" },

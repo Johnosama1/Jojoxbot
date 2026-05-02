@@ -78,7 +78,7 @@ export async function showAdminMenu(bot: TelegramBot, chatId: number, messageId?
   const [usersRes] = await db.select({ c: count() }).from(usersTable);
   const [pendingRes] = await db.select({ c: count() }).from(withdrawalsTable).where(eq(withdrawalsTable.status, "pending"));
   const text =
-    `🎛 *لوحة التحكم — JojoX*\n\n` +
+    `🎛 *لوحة التحكم — Jo-jokes*\n\n` +
     `👥 المستخدمون: *${usersRes?.c ?? 0}*\n` +
     `💸 سحوبات معلقة: *${pendingRes?.c ?? 0}*\n\n` +
     `اختر من القائمة:`;
