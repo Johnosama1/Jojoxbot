@@ -22,30 +22,64 @@ const UserContext = createContext<UserContextType>({
 
 const OWNER_USERNAME = "J_O_H_N8";
 
+// ── LocalStorage cache helpers ──────────────────────────────────────
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function readCache<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw) as { ts: number; data: T };
+    if (Date.now() - ts > CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key: string, data: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch { /* storage full — silently skip */ }
+}
+
+// ────────────────────────────────────────────────────────────────────
+
+const hideSplash = () => {
+  const splash = document.getElementById("splash");
+  if (splash && !splash.classList.contains("hidden")) {
+    splash.classList.add("hidden");
+    setTimeout(() => splash.remove(), 600);
+  }
+};
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [banned, setBanned] = useState(false);
   const [slots, setSlots] = useState<WheelSlot[]>([]);
 
-  const hideSplash = () => {
-    const splash = document.getElementById("splash");
-    if (splash) {
-      splash.classList.add("hidden");
-      setTimeout(() => splash.remove(), 600);
-    }
-  };
-
   const init = async () => {
     try {
       initTelegramApp();
       const tgUser = getTelegramUser() ?? getMockUser();
 
-      // Fire all public fetches immediately in parallel
-      const slotsPromise = getWheelSlotsOnce();
-      getTasksOnce().catch(() => {});
+      // ── Step 1: Show cached data INSTANTLY (< 1 ms) ──────────────
+      const cachedUser = readCache<User>(`user:${tgUser.id}`);
+      const cachedSlots = readCache<WheelSlot[]>("slots");
 
-      const u = await api.initUser({
+      if (cachedUser && cachedSlots) {
+        setUser(cachedUser);
+        setSlots(cachedSlots);
+        setLoading(false);
+        hideSplash(); // ← instant reveal from cache
+      }
+
+      // ── Step 2: Kick off all network requests in parallel ─────────
+      const slotsPromise = getWheelSlotsOnce();
+      getTasksOnce().catch(() => {});   // warm cache silently
+
+      const freshUser = await api.initUser({
         id: tgUser.id,
         username: tgUser.username ?? undefined,
         first_name: tgUser.first_name ?? undefined,
@@ -53,22 +87,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         photo_url: tgUser.photo_url ?? undefined,
       });
 
-      // Warm user-specific caches + wait for slots — all in parallel
-      const [resolvedSlots] = await Promise.all([
-        slotsPromise.catch(() => [] as WheelSlot[]),
-        getCompletedTasksOnce(u.id).catch(() => {}),
-        getWithdrawalsOnce(u.id).catch(() => {}),
-      ]);
+      const freshSlots = await slotsPromise.catch(() => cachedSlots ?? [] as WheelSlot[]);
 
-      setSlots(resolvedSlots as WheelSlot[]);
-      setUser(u);
+      // Update UI & cache
+      setUser(freshUser);
+      setSlots(freshSlots as WheelSlot[]);
+      writeCache(`user:${freshUser.id}`, freshUser);
+      writeCache("slots", freshSlots);
+
+      // ── Step 3: Hide splash if not already hidden ─────────────────
+      hideSplash();
+      setLoading(false);
+
+      // ── Step 4: Pre-warm secondary caches in background ──────────
+      getCompletedTasksOnce(freshUser.id).catch(() => {});
+      getWithdrawalsOnce(freshUser.id).catch(() => {});
+
     } catch (e: unknown) {
       if (e instanceof Error && e.message === "محظور") {
         setBanned(true);
       } else {
         console.error("Failed to init user", e);
       }
-    } finally {
       setLoading(false);
       hideSplash();
     }
@@ -79,6 +119,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const u = await api.getUser(user.id);
       setUser(u);
+      writeCache(`user:${u.id}`, u);
     } catch (e) {
       console.error("Failed to refresh user", e);
     }
