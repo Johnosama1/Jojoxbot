@@ -6,6 +6,8 @@
     <title>Jojox - عجلة الحظ</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preload" as="image" href="/bg.jpg" />
+    <!-- Pre-connect to API server to eliminate DNS + TLS handshake latency -->
+    <link rel="preconnect" href="/" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Non-blocking font load — app renders immediately with system font fallback -->

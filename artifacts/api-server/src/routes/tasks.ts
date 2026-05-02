@@ -7,6 +7,14 @@ import { checkChannelMembership } from "../bot/admin";
 
 const router = Router();
 
+// ── In-memory cache for active tasks list ───────────────────────────
+let _tasksCache: { data: unknown; ts: number } | null = null;
+const TASKS_TTL = 30_000; // 30 seconds
+
+export function invalidateTasksCache() {
+  _tasksCache = null;
+}
+
 function extractChannelUsername(url: string | null): string | null {
   if (!url) return null;
   const m = url.match(/t\.me\/([A-Za-z0-9_]+)/);
@@ -14,16 +22,27 @@ function extractChannelUsername(url: string | null): string | null {
 }
 
 router.get("/", async (_req, res) => {
-  const now = new Date();
-  const tasks = await db
-    .select()
-    .from(tasksTable)
-    .where(eq(tasksTable.isActive, true));
-  const active = tasks.filter((t) => !t.expiresAt || t.expiresAt > now);
+  const now = Date.now();
+
+  if (_tasksCache && now - _tasksCache.ts < TASKS_TTL) {
+    res.setHeader("Cache-Control", "public, max-age=30");
+    res.json(_tasksCache.data);
+    return;
+  }
+
+  const nowDate = new Date();
+  const tasks = await db.select().from(tasksTable).where(eq(tasksTable.isActive, true));
+  const active = tasks.filter((t) => !t.expiresAt || t.expiresAt > nowDate);
+
+  _tasksCache = { data: active, ts: now };
+  res.setHeader("Cache-Control", "public, max-age=30");
   res.json(active);
 });
 
 router.post("/:taskId/complete", async (req, res) => {
+  // Invalidate cache when a task interaction happens
+  invalidateTasksCache();
+
   const taskId = parseInt(req.params.taskId);
   const { userId } = req.body;
 
@@ -67,48 +86,34 @@ router.post("/:taskId/complete", async (req, res) => {
       if (botInstance) {
         const isMember = await checkChannelMembership(botInstance, userId, channelUsername);
         if (!isMember) {
-          res.status(400).json({
-            error: `يجب الانضمام للقناة أولاً: @${channelUsername}`,
-          });
+          res.status(400).json({ error: `يجب الانضمام للقناة أولاً: @${channelUsername}` });
           return;
         }
       }
     } catch {
-      // If bot check fails, allow completion (don't block user)
+      // If bot check fails, allow completion
     }
   }
 
   await db.insert(userTasksTable).values({ userId, taskId });
 
-  const [user] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, userId))
-    .limit(1);
-
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (user) {
     const newTasksCompleted = (user.tasksCompleted || 0) + 1;
     const extraSpin = newTasksCompleted % 5 === 0 ? 1 : 0;
     await db
       .update(usersTable)
-      .set({
-        tasksCompleted: newTasksCompleted,
-        spins: sql`spins + ${extraSpin}`,
-      })
+      .set({ tasksCompleted: newTasksCompleted, spins: sql`spins + ${extraSpin}` })
       .where(eq(usersTable.id, userId));
   }
 
-  const [updated] = await db
-    .select()
-    .from(usersTable)
-    .where(eq(usersTable.id, userId))
-    .limit(1);
-
+  const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   res.json({ success: true, user: updated });
 });
 
 router.get("/:userId/completed", async (req, res) => {
   const userId = parseInt(req.params.userId);
+  res.setHeader("Cache-Control", "private, max-age=10");
   const completed = await db
     .select()
     .from(userTasksTable)
