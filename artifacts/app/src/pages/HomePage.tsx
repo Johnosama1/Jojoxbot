@@ -1,20 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useUser } from "../lib/userContext";
-import { api, WheelSlot, getWheelSlotsOnce } from "../lib/api";
+import { api } from "../lib/api";
 import WheelCanvas from "../components/WheelCanvas";
 
 export default function HomePage() {
-  const { user, refresh } = useUser();
-  const [slots, setSlots] = useState<WheelSlot[]>([]);
+  const { user, refresh, slots } = useUser();
   const [spinning, setSpinning] = useState(false);
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [winAmount, setWinAmount] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    getWheelSlotsOnce().then(setSlots).catch(console.error);
-  }, []);
 
   const handleSpin = async () => {
     if (!user || spinning || user.spins <= 0) return;

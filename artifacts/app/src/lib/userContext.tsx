@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { api, User, getWheelSlotsOnce, getTasksOnce, getCompletedTasksOnce, getWithdrawalsOnce } from "./api";
+import { api, User, WheelSlot, getWheelSlotsOnce, getTasksOnce, getCompletedTasksOnce, getWithdrawalsOnce } from "./api";
 import { getTelegramUser, initTelegramApp, getMockUser } from "./telegram";
 
 interface UserContextType {
@@ -8,6 +8,7 @@ interface UserContextType {
   refresh: () => Promise<void>;
   isAdmin: boolean;
   banned: boolean;
+  slots: WheelSlot[];
 }
 
 const UserContext = createContext<UserContextType>({
@@ -16,6 +17,7 @@ const UserContext = createContext<UserContextType>({
   refresh: async () => {},
   isAdmin: false,
   banned: false,
+  slots: [],
 });
 
 const OWNER_USERNAME = "J_O_H_N8";
@@ -24,6 +26,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [banned, setBanned] = useState(false);
+  const [slots, setSlots] = useState<WheelSlot[]>([]);
 
   const hideSplash = () => {
     const splash = document.getElementById("splash");
@@ -38,8 +41,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       initTelegramApp();
       const tgUser = getTelegramUser() ?? getMockUser();
 
-      // Start public caches immediately (no userId needed)
-      getWheelSlotsOnce().catch(() => {});
+      // Fire all public fetches immediately in parallel
+      const slotsPromise = getWheelSlotsOnce();
       getTasksOnce().catch(() => {});
 
       const u = await api.initUser({
@@ -50,12 +53,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         photo_url: tgUser.photo_url ?? undefined,
       });
 
-      // Now warm user-specific caches in parallel
-      await Promise.all([
+      // Warm user-specific caches + wait for slots — all in parallel
+      const [resolvedSlots] = await Promise.all([
+        slotsPromise.catch(() => [] as WheelSlot[]),
         getCompletedTasksOnce(u.id).catch(() => {}),
         getWithdrawalsOnce(u.id).catch(() => {}),
       ]);
 
+      setSlots(resolvedSlots as WheelSlot[]);
       setUser(u);
     } catch (e: unknown) {
       if (e instanceof Error && e.message === "محظور") {
@@ -86,7 +91,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = !!(user && (user.username === OWNER_USERNAME));
 
   return (
-    <UserContext.Provider value={{ user, loading, refresh, isAdmin, banned }}>
+    <UserContext.Provider value={{ user, loading, refresh, isAdmin, banned, slots }}>
       {children}
     </UserContext.Provider>
   );
