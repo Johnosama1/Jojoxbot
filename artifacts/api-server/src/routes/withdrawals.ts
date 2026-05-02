@@ -1,9 +1,10 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
-import { withdrawalsTable, usersTable, botSettingsTable } from "@workspace/db/schema";
+import { withdrawalsTable, usersTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { sendWithdrawalNotification } from "../bot";
+import { getSetting } from "../lib/settingsCache";
 
 const router = Router();
 
@@ -58,10 +59,11 @@ router.post("/", withdrawLimiter, async (req, res) => {
     .set({ balance: sql`balance - ${amt}` })
     .where(eq(usersTable.id, numUserId));
 
-  // Determine mode
-  const modeSetting = await db.select().from(botSettingsTable)
-    .where(eq(botSettingsTable.key, "withdraw_mode")).limit(1);
-  const mode = modeSetting[0]?.value || "manual";
+  // Determine mode — cached, no extra DB round-trip
+  const [mode, ownerIdStr] = await Promise.all([
+    getSetting("withdraw_mode"),
+    getSetting("owner_telegram_id"),
+  ]);
   const initialStatus = mode === "auto" ? "approved" : "pending";
 
   const [withdrawal] = await db.insert(withdrawalsTable).values({
@@ -73,10 +75,8 @@ router.post("/", withdrawLimiter, async (req, res) => {
 
   // Notify owner (fire-and-forget)
   try {
-    const ownerSetting = await db.select().from(botSettingsTable)
-      .where(eq(botSettingsTable.key, "owner_telegram_id")).limit(1);
-    if (ownerSetting.length > 0) {
-      const ownerId = parseInt(ownerSetting[0].value);
+    if (ownerIdStr) {
+      const ownerId = parseInt(ownerIdStr);
       sendWithdrawalNotification(
         ownerId,
         { firstName: user.firstName || "", username: user.username, id: numUserId },

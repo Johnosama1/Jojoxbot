@@ -6,10 +6,6 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { initBot, setupCallbackHandlers } from "./bot";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
-
 const app: Express = express();
 
 // ── Security headers (helmet) ────────────────────────────────────────
@@ -67,20 +63,22 @@ export const authLimiter = rateLimit({
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
-// ── Logging ───────────────────────────────────────────────────────────
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
+// ── Logging (production only — reduces dev I/O overhead) ─────────────
+if (process.env.NODE_ENV === "production") {
+  app.use(
+    pinoHttp({
+      logger,
+      serializers: {
+        req(req) {
+          return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
+        },
+        res(res) {
+          return { statusCode: res.statusCode };
+        },
       },
-      res(res) {
-        return { statusCode: res.statusCode };
-      },
-    },
-  }),
-);
+    }),
+  );
+}
 
 // ── Routes ────────────────────────────────────────────────────────────
 app.use("/api", router);
@@ -95,11 +93,5 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal server error" });
 });
-
-initBot();
-setupCallbackHandlers();
-
-// Pre-warm DB connection
-db.execute(sql`SELECT 1`).catch(() => {});
 
 export default app;
