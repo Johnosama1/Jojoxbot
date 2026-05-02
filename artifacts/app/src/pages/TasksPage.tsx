@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
 import { api, Task } from "../lib/api";
-import { CheckCircle, Circle, ExternalLink, Clock, Zap } from "lucide-react";
+import { CheckCircle, ExternalLink, Clock, Zap } from "lucide-react";
 
 export default function TasksPage() {
   const { user, refresh } = useUser();
@@ -32,7 +32,7 @@ export default function TasksPage() {
     try {
       await api.completeTask(task.id, user.id);
       setCompleted((prev) => [...prev, task.id]);
-      setMessage({ taskId: task.id, text: "✅ تم إكمال المهمة! حصلت على مكافأتك", type: "success" });
+      setMessage({ taskId: task.id, text: "✅ تم إكمال المهمة!", type: "success" });
       await refresh();
     } catch (e: unknown) {
       setMessage({ taskId: task.id, text: e instanceof Error ? e.message : "فشل", type: "error" });
@@ -45,123 +45,177 @@ export default function TasksPage() {
   const handleComplete = async (task: Task) => {
     if (!user || completing !== null) return;
     if (task.url) {
-      // Two-step: first open URL, then verify
-      if (!urlOpened.has(task.id)) {
-        handleOpenUrl(task);
-        return;
-      }
-      // Second click: verify
+      if (!urlOpened.has(task.id)) { handleOpenUrl(task); return; }
       await handleVerify(task);
     } else {
       await handleVerify(task);
     }
   };
 
-  const nextSpinAt = user ? Math.ceil(user.tasksCompleted / 5) * 5 : 5;
   const progressToNextSpin = user ? (user.tasksCompleted % 5) : 0;
 
   return (
-    <div className="min-h-screen page-content px-4 pt-6">
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-black gold-text">المهام</h1>
-        <p className="text-purple-400 text-sm mt-1">أكمل 5 مهام واحصل على لفة مجانية</p>
+    <div className="page-content px-4 pt-5 flex flex-col gap-4">
+
+      {/* ── Header ── */}
+      <div className="text-center slide-up">
+        <h1 className="gold-text" style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>المهام</h1>
+        <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 4 }}>
+          أكمل 5 مهام واحصل على لفة مجانية 🎡
+        </p>
       </div>
 
-      {/* Progress */}
-      <div className="bg-purple-900/30 border border-purple-700/50 rounded-2xl p-4 mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-white text-sm font-medium">التقدم نحو اللفة التالية</span>
-          <div className="flex items-center gap-1 text-yellow-400">
-            <Zap size={14} />
-            <span className="text-sm font-bold">{progressToNextSpin}/5</span>
+      {/* ── Progress card ── */}
+      <div className="glass slide-up" style={{ padding: "16px 18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <span style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>
+            التقدم نحو اللفة التالية
+          </span>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 4,
+            background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)",
+            borderRadius: 999, padding: "3px 10px",
+          }}>
+            <Zap size={12} color="#fbbf24" />
+            <span style={{ color: "#fbbf24", fontWeight: 700, fontSize: 13 }}>
+              {progressToNextSpin}/5
+            </span>
           </div>
         </div>
-        <div className="w-full bg-purple-900/50 rounded-full h-3 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${(progressToNextSpin / 5) * 100}%`,
-              background: "linear-gradient(90deg, #ffd700, #ffaa00)",
-              boxShadow: "0 0 10px rgba(255,215,0,0.5)",
-            }}
-          />
+
+        {/* Milestone dots */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+          {Array.from({ length: 5 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                width: 28, height: 28, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 11, fontWeight: 900,
+                background: i < progressToNextSpin
+                  ? "linear-gradient(135deg, #fbbf24, #f59e0b)"
+                  : "rgba(255,255,255,0.10)",
+                color: i < progressToNextSpin ? "#000" : "rgba(255,255,255,0.30)",
+                boxShadow: i < progressToNextSpin ? "0 0 8px rgba(251,191,36,0.5)" : "none",
+              }}
+            >
+              {i + 1}
+            </div>
+          ))}
         </div>
-        <p className="text-purple-400 text-xs mt-2">
+
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${(progressToNextSpin / 5) * 100}%` }} />
+        </div>
+        <p style={{ color: "rgba(255,255,255,0.38)", fontSize: 11, marginTop: 8, textAlign: "center" }}>
           {5 - progressToNextSpin} مهام متبقية للفة المجانية
         </p>
       </div>
 
-      {/* Tasks List */}
+      {/* ── Tasks ── */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-10 h-10 rounded-full border-2 border-yellow-400 border-t-transparent animate-spin" />
+        <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%",
+            border: "2.5px solid #fbbf24", borderTopColor: "transparent",
+            animation: "spin 0.8s linear infinite",
+          }} />
         </div>
       ) : tasks.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-4xl mb-3">📋</div>
-          <p className="text-purple-400">لا توجد مهام متاحة حالياً</p>
+        <div style={{ textAlign: "center", padding: "48px 0" }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, margin: "0 auto 12px",
+            background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.20)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28,
+          }}>
+            📋
+          </div>
+          <p style={{ color: "rgba(255,255,255,0.40)", fontSize: 14 }}>لا توجد مهام متاحة حالياً</p>
+          <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, marginTop: 4 }}>تفقّد مجدداً قريباً</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {tasks.map((task) => {
             const isDone = completed.includes(task.id);
             const isExpiring = task.expiresAt && new Date(task.expiresAt).getTime() - Date.now() < 3600000;
+            const isOpened = urlOpened.has(task.id);
 
             return (
               <div
                 key={task.id}
-                className={`rounded-2xl p-4 border transition-all ${
-                  isDone
-                    ? "border-green-800/50 bg-green-900/20"
-                    : "border-purple-700/50 bg-purple-900/20"
-                }`}
+                className="glass slide-up"
+                style={{
+                  padding: "14px 16px",
+                  border: isDone
+                    ? "1px solid rgba(16,185,129,0.30)"
+                    : "1px solid rgba(255,255,255,0.10)",
+                  background: isDone
+                    ? "rgba(16,185,129,0.08)"
+                    : "rgba(0,0,0,0.28)",
+                }}
               >
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl">{task.icon || "⭐"}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={`font-bold truncate ${isDone ? "text-green-400" : "text-white"}`}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 26, flexShrink: 0 }}>{task.icon || "⭐"}</div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{
+                        color: isDone ? "#10b981" : "#fff",
+                        fontWeight: 700, fontSize: 14,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
                         {task.title}
-                      </p>
+                      </span>
                       {isExpiring && (
-                        <span className="flex items-center gap-1 text-orange-400 text-xs">
-                          <Clock size={10} />
-                          ينتهي قريباً
+                        <span style={{
+                          display: "flex", alignItems: "center", gap: 3,
+                          color: "#f97316", fontSize: 10, flexShrink: 0,
+                        }}>
+                          <Clock size={9} /> ينتهي قريباً
                         </span>
                       )}
                     </div>
                     {task.description && (
-                      <p className="text-purple-400 text-xs mt-0.5 line-clamp-1">{task.description}</p>
-                    )}
-                    {task.expiresAt && (
-                      <p className="text-purple-500 text-xs mt-0.5">
-                        ينتهي: {new Date(task.expiresAt).toLocaleString("ar")}
+                      <p style={{ color: "rgba(255,255,255,0.38)", fontSize: 12, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {task.description}
                       </p>
                     )}
                   </div>
-                  <div className="flex-shrink-0">
+
+                  <div style={{ flexShrink: 0 }}>
                     {isDone ? (
-                      <div className="flex items-center gap-1 text-green-400">
-                        <CheckCircle size={22} />
-                      </div>
+                      <CheckCircle size={24} color="#10b981" />
                     ) : (
                       <button
                         onClick={() => handleComplete(task)}
                         disabled={completing === task.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-bold text-black transition-all disabled:opacity-60"
                         style={{
-                          background: "linear-gradient(135deg, #ffd700, #ffaa00)",
-                          boxShadow: "0 0 12px rgba(255,215,0,0.3)",
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "7px 14px", borderRadius: 12, fontWeight: 700, fontSize: 13,
+                          border: "none", cursor: "pointer",
+                          background: task.url && !isOpened
+                            ? "linear-gradient(135deg, #3b82f6, #2563eb)"
+                            : "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                          color: task.url && !isOpened ? "#fff" : "#000",
+                          boxShadow: task.url && !isOpened
+                            ? "0 0 10px rgba(59,130,246,0.35)"
+                            : "0 0 10px rgba(251,191,36,0.35)",
+                          opacity: completing === task.id ? 0.6 : 1,
                         }}
                       >
-                        {task.url && <ExternalLink size={12} />}
-                        {completing === task.id ? "..." : "أكمل"}
+                        {task.url && !isOpened
+                          ? <><ExternalLink size={11} /> افتح</>
+                          : completing === task.id ? "..." : "تحقق"}
                       </button>
                     )}
                   </div>
                 </div>
-                {message && message.taskId === task.id && (
-                  <p className={`text-xs mt-2 ${message.type === "success" ? "text-green-400" : "text-red-400"}`}>
+
+                {message?.taskId === task.id && (
+                  <p style={{
+                    fontSize: 12, marginTop: 8,
+                    color: message.type === "success" ? "#10b981" : "#fca5a5",
+                  }}>
                     {message.text}
                   </p>
                 )}
@@ -170,6 +224,8 @@ export default function TasksPage() {
           })}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

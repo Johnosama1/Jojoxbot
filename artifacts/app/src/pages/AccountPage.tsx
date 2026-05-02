@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useUser } from "../lib/userContext";
 import { api } from "../lib/api";
-import { Wallet, Send, CheckCircle, History } from "lucide-react";
+import { Wallet, Send, CheckCircle, Coins } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
-
 const TON_ADDRESS_REGEX = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
 function isValidTonAddress(addr: string): boolean {
   return TON_ADDRESS_REGEX.test(addr.trim());
@@ -32,16 +31,10 @@ export default function AccountPage() {
       setError(`الحد الأدنى للسحب ${MIN_WITHDRAWAL} TON`);
       return;
     }
-    if (amt > balance) {
-      setError("الرصيد غير كافٍ");
-      return;
-    }
-    if (!walletAddress.trim()) {
-      setError("أدخل عنوان المحفظة");
-      return;
-    }
+    if (amt > balance) { setError("الرصيد غير كافٍ"); return; }
+    if (!walletAddress.trim()) { setError("أدخل عنوان المحفظة"); return; }
     if (!isValidTonAddress(walletAddress)) {
-      setError("عنوان المحفظة غير صحيح — يجب أن يبدأ بـ EQ أو UQ ويتكون من 48 حرفاً");
+      setError("عنوان المحفظة غير صحيح — يجب أن يبدأ بـ EQ أو UQ");
       return;
     }
 
@@ -60,106 +53,144 @@ export default function AccountPage() {
   };
 
   const userDisplay = user ? (user.firstName || user.username || "مستخدم") : "...";
-  const username = user?.username ? `@${user.username}` : "";
 
   return (
-    <div className="min-h-screen page-content px-4 pt-6">
-      {/* Profile */}
-      <div className="flex flex-col items-center gap-3 mb-8">
+    <div className="page-content px-4 pt-5 flex flex-col gap-4">
+
+      {/* ── Profile hero ── */}
+      <div
+        className="glass flex flex-col items-center gap-3 py-6 slide-up"
+        style={{
+          background: "linear-gradient(145deg, rgba(251,191,36,0.12), rgba(0,0,0,0.40))",
+          border: "1px solid rgba(251,191,36,0.22)",
+        }}
+      >
         {user?.photoUrl ? (
           <img
             src={user.photoUrl}
             alt="avatar"
-            className="w-20 h-20 rounded-full object-cover border-2 border-yellow-400"
-            style={{ boxShadow: "0 0 25px rgba(255,215,0,0.5)" }}
+            style={{
+              width: 72, height: 72, borderRadius: "50%", objectFit: "cover",
+              border: "3px solid rgba(251,191,36,0.7)",
+              boxShadow: "0 0 24px rgba(251,191,36,0.40)",
+            }}
           />
         ) : (
           <div
-            className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-black border-2 border-yellow-400"
             style={{
-              background: "linear-gradient(135deg, #1a0a2e, #3d1a6e)",
-              boxShadow: "0 0 25px rgba(255,215,0,0.5)",
+              width: 72, height: 72, borderRadius: "50%",
+              background: "linear-gradient(135deg, #0a2e18, #1a6e3a)",
+              border: "3px solid rgba(251,191,36,0.7)",
+              boxShadow: "0 0 24px rgba(251,191,36,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontWeight: 900, fontSize: 28, color: "#fbbf24",
             }}
           >
-            <span className="gold-text">{userDisplay[0]?.toUpperCase()}</span>
+            {userDisplay[0]?.toUpperCase()}
           </div>
         )}
         <div className="text-center">
-          <h2 className="text-xl font-black text-white">{userDisplay}</h2>
-          {username && <p className="text-purple-400 text-sm">{username}</p>}
+          <h2 style={{ color: "#fff", fontWeight: 900, fontSize: 20, margin: 0 }}>{userDisplay}</h2>
+          {user?.username && (
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 2 }}>@{user.username}</p>
+          )}
+        </div>
+
+        {/* Balance */}
+        <div className="text-center mt-1">
+          <div style={{ color: "rgba(251,191,36,0.60)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5 }}>
+            رصيدك
+          </div>
+          <div className="gold-text" style={{ fontWeight: 900, fontSize: 38, lineHeight: 1.1 }}>
+            {balance.toFixed(4)}
+          </div>
+          <div style={{ color: "rgba(251,191,36,0.65)", fontWeight: 700, fontSize: 13 }}>TON</div>
+        </div>
+
+        {/* Stats row */}
+        <div
+          style={{
+            display: "flex", gap: 0,
+            borderTop: "1px solid rgba(255,255,255,0.10)",
+            marginTop: 8, paddingTop: 14, width: "100%",
+          }}
+        >
+          {[
+            { label: "لفات", value: user?.spins ?? 0, color: "#fbbf24" },
+            { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981" },
+            { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6" },
+          ].map(({ label, value, color }, i, arr) => (
+            <div
+              key={label}
+              style={{
+                flex: 1, textAlign: "center",
+                borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.10)" : "none",
+              }}
+            >
+              <div style={{ color, fontWeight: 900, fontSize: 22 }}>{value}</div>
+              <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>
+                {label}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Balance Card */}
-      <div
-        className="rounded-3xl p-6 mb-6 text-center relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #1a0a2e 0%, #3d1a6e 50%, #1a0a2e 100%)",
-          border: "1px solid rgba(255,215,0,0.3)",
-          boxShadow: "0 0 30px rgba(147,51,234,0.3)",
-        }}
-      >
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 70% 50%, #ffd700 0%, transparent 60%)" }} />
-        <Wallet size={28} className="text-yellow-400 mx-auto mb-2" />
-        <p className="text-purple-300 text-sm mb-1">رصيدك</p>
-        <p className="text-4xl font-black gold-text">{balance.toFixed(4)}</p>
-        <p className="text-yellow-600 text-sm font-bold mt-1">TON</p>
-        <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-purple-700/50">
-          <div className="text-center">
-            <p className="text-white font-bold">{user?.spins ?? 0}</p>
-            <p className="text-purple-400 text-xs">لفات</p>
-          </div>
-          <div className="w-px bg-purple-700/50" />
-          <div className="text-center">
-            <p className="text-white font-bold">{user?.referralCount ?? 0}</p>
-            <p className="text-purple-400 text-xs">إحالات</p>
-          </div>
-          <div className="w-px bg-purple-700/50" />
-          <div className="text-center">
-            <p className="text-white font-bold">{user?.tasksCompleted ?? 0}</p>
-            <p className="text-purple-400 text-xs">مهام</p>
+      {/* ── Withdrawal Form ── */}
+      <div className="glass slide-up" style={{ padding: "20px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Send size={16} color="#fbbf24" />
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>سحب العملات</span>
+          <div style={{ marginRight: "auto" }}>
+            <span
+              style={{
+                background: canWithdraw ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.07)",
+                border: `1px solid ${canWithdraw ? "rgba(16,185,129,0.40)" : "rgba(255,255,255,0.12)"}`,
+                color: canWithdraw ? "#10b981" : "rgba(255,255,255,0.35)",
+                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
+              }}
+            >
+              {canWithdraw ? "مسموح" : `الحد الأدنى ${MIN_WITHDRAWAL} TON`}
+            </span>
           </div>
         </div>
-      </div>
-
-      {/* Withdrawal Form */}
-      <div className="bg-purple-900/30 border border-purple-700/50 rounded-2xl p-4 mb-4">
-        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-          <Send size={18} className="text-yellow-400" />
-          سحب العملات
-        </h3>
 
         {success && (
-          <div className="bg-green-900/30 border border-green-700/50 rounded-xl p-3 mb-4 flex items-center gap-2">
-            <CheckCircle size={18} className="text-green-400 flex-shrink-0" />
-            <p className="text-green-400 text-sm">تم إرسال طلب السحب! سيتم مراجعته قريباً.</p>
+          <div
+            style={{
+              background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.35)",
+              borderRadius: 14, padding: "10px 14px", marginBottom: 14,
+              display: "flex", alignItems: "center", gap: 8,
+            }}
+          >
+            <CheckCircle size={16} color="#10b981" />
+            <span style={{ color: "#10b981", fontSize: 13 }}>تم إرسال طلب السحب! سيتم مراجعته قريباً.</span>
           </div>
         )}
 
-        {!canWithdraw && !success && (
-          <div className="bg-orange-900/20 border border-orange-700/50 rounded-xl p-3 mb-4">
-            <p className="text-orange-400 text-sm">
-              الحد الأدنى للسحب هو {MIN_WITHDRAWAL} TON. رصيدك الحالي: {balance.toFixed(4)} TON
-            </p>
-          </div>
-        )}
-
-        <form onSubmit={handleWithdraw} className="flex flex-col gap-3">
+        <form onSubmit={handleWithdraw} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label className="text-purple-300 text-sm mb-1 block">عنوان محفظة TON</label>
+            <label style={{ color: "rgba(255,255,255,0.50)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+              عنوان محفظة TON
+            </label>
             <input
               type="text"
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               placeholder="UQ..."
               disabled={!canWithdraw || submitting}
-              className="w-full bg-purple-900/40 border border-purple-700/50 rounded-xl px-3 py-2.5 text-white text-sm placeholder-purple-600 focus:outline-none focus:border-yellow-400/50 disabled:opacity-50"
               dir="ltr"
+              style={{
+                width: "100%", background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
+                padding: "11px 14px", color: "#fff", fontSize: 13,
+                outline: "none", fontFamily: "monospace",
+              }}
             />
           </div>
           <div>
-            <label className="text-purple-300 text-sm mb-1 block">
-              المبلغ (TON) — الحد الأدنى: {MIN_WITHDRAWAL}
+            <label style={{ color: "rgba(255,255,255,0.50)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+              المبلغ (TON)
             </label>
             <input
               type="number"
@@ -170,26 +201,56 @@ export default function AccountPage() {
               min={MIN_WITHDRAWAL}
               max={balance}
               disabled={!canWithdraw || submitting}
-              className="w-full bg-purple-900/40 border border-purple-700/50 rounded-xl px-3 py-2.5 text-white text-sm placeholder-purple-600 focus:outline-none focus:border-yellow-400/50 disabled:opacity-50"
+              style={{
+                width: "100%", background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
+                padding: "11px 14px", color: "#fff", fontSize: 13, outline: "none",
+              }}
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && (
+            <p style={{ color: "#fca5a5", fontSize: 13, margin: 0 }}>{error}</p>
+          )}
 
           <button
             type="submit"
             disabled={!canWithdraw || submitting}
-            className="w-full py-3.5 rounded-xl font-black text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: canWithdraw
-                ? "linear-gradient(135deg, #ffd700, #ffaa00)"
-                : "#333",
-              boxShadow: canWithdraw ? "0 0 20px rgba(255,215,0,0.4)" : "none",
+              width: "100%", padding: "14px",
+              borderRadius: 16, fontWeight: 900, fontSize: 15,
+              border: "none", cursor: canWithdraw ? "pointer" : "not-allowed",
+              ...(canWithdraw
+                ? {
+                    background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                    color: "#000",
+                    boxShadow: "0 0 20px rgba(251,191,36,0.40)",
+                  }
+                : {
+                    background: "rgba(255,255,255,0.07)",
+                    color: "rgba(255,255,255,0.28)",
+                  }),
             }}
           >
             {submitting ? "جاري الإرسال..." : "طلب السحب"}
           </button>
         </form>
+      </div>
+
+      {/* ── TON info ── */}
+      <div
+        className="glass"
+        style={{
+          padding: "14px 18px",
+          display: "flex", alignItems: "center", gap: 10,
+          background: "rgba(59,130,246,0.10)",
+          border: "1px solid rgba(59,130,246,0.22)",
+        }}
+      >
+        <Coins size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, margin: 0 }}>
+          يتم مراجعة طلبات السحب يدوياً من قِبل المالك وإرسال TON لمحفظتك.
+        </p>
       </div>
     </div>
   );
