@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import lottie, { type AnimationItem } from "lottie-web";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
@@ -28,9 +28,6 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     fetch(`${API_BASE}/sticker/${id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Not ok");
-
-        // Use Content-Type (always CORS-safe) to detect format
-        // instead of a custom header that may be blocked by CORS
         const ct = res.headers.get("Content-Type") ?? "";
 
         if (ct.includes("video/webm")) {
@@ -40,7 +37,6 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
           setVideoUrl(URL.createObjectURL(blob));
           setFormat("webm");
         } else if (ct.includes("application/json")) {
-          // Server already decompressed TGS → plain Lottie JSON
           const json = await res.json();
           if (cancelled) return;
           setLottieData(json);
@@ -54,19 +50,29 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     return () => { cancelled = true; };
   }, [id]);
 
-  // Mount lottie animation once container div exists in DOM
-  useEffect(() => {
+  // useLayoutEffect runs synchronously AFTER DOM mutations — guarantees
+  // containerRef.current is set before we try to mount lottie into it.
+  useLayoutEffect(() => {
     if (format !== "lottie" || !lottieData || !containerRef.current) return;
+
     animRef.current?.destroy();
-    animRef.current = lottie.loadAnimation({
+    animRef.current = null;
+
+    const anim = lottie.loadAnimation({
       container: containerRef.current,
-      renderer: "canvas",   // canvas is faster & more compatible on mobile
+      renderer: "svg",      // SVG is more reliable in Android WebView than canvas
       loop: true,
-      autoplay: true,
+      autoplay: false,       // we call play() manually below
       animationData: lottieData,
     });
+
+    // Explicit play() after a tick — ensures WebView has finished layout
+    const t = setTimeout(() => { anim.play(); }, 0);
+    animRef.current = anim;
+
     return () => {
-      animRef.current?.destroy();
+      clearTimeout(t);
+      anim.destroy();
       animRef.current = null;
     };
   }, [format, lottieData]);
@@ -98,11 +104,10 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     return (
       <div
         ref={containerRef}
-        style={{ width: size, height: size, display: "inline-block", ...style }}
+        style={{ width: size, height: size, display: "inline-block", lineHeight: 0, ...style }}
       />
     );
   }
 
-  // Loading → show fallback emoji until sticker is ready
   return fallbackEl;
 }
