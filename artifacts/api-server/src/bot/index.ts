@@ -113,7 +113,7 @@ export function initBot() {
 
       const MINI_APP_URL =
         process.env.MINI_APP_URL ||
-        `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}/app`;
+        `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
       const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
 
       const greeting = isNew
