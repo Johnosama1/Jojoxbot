@@ -54,9 +54,11 @@
   * {
     @apply border-border;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
   }
   html, body {
     height: 100%;
+    height: 100dvh;
     overflow: hidden;
     position: fixed;
     width: 100%;
@@ -67,12 +69,25 @@
     @apply font-sans antialiased text-foreground;
     background: #001a0a;
     direction: rtl;
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   #root {
     height: 100%;
+    height: 100dvh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+  /* Prevent iOS zoom on inputs — keep font-size ≥ 16px */
+  input, textarea, select {
+    font-size: 16px !important;
+    font-family: 'Cairo', sans-serif;
+  }
+  /* Fast tap — remove 300ms click delay on mobile */
+  a, button, [role="button"] {
+    touch-action: manipulation;
   }
 }
 
@@ -141,10 +156,12 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 90px;
+  /* Account for TabBar height + iOS home indicator */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   position: relative;
   z-index: 3;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 /* ── Tab bar ── */

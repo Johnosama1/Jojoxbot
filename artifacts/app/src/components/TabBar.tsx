@@ -19,7 +19,7 @@ export default function TabBar() {
         left: 0,
         right: 0,
         zIndex: 50,
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px), 4px)",
         background: "rgba(0,12,6,0.85)",
         backdropFilter: "blur(24px)",
         WebkitBackdropFilter: "blur(24px)",

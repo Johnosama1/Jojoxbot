@@ -348,7 +348,12 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [spinning, winnerIndex, slots]);
 
-  const size = Math.min((typeof window !== "undefined" ? window.innerWidth : 380) - 48, 340);
+  // Responsive size: fits small phones (320px) up to large ones (430px+)
+  const vw = typeof window !== "undefined" ? window.innerWidth : 380;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 700;
+  // On short screens (< 660px tall), shrink the wheel to leave room for controls
+  const maxByHeight = vh < 660 ? vh * 0.38 : 340;
+  const size = Math.min(vw - 40, maxByHeight, 340);
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
