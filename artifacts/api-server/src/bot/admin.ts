@@ -70,7 +70,7 @@ async function editOrSend(
       return;
     } catch { /* fall through to send */ }
   }
-  await bot.sendMessage(chatId, text, { ...opts, protect_content: true });
+  await bot.sendMessage(chatId, text, { ...opts });
 }
 
 export async function showAdminMenu(bot: TelegramBot, chatId: number, messageId?: number) {
@@ -197,7 +197,7 @@ function showUserCard(
     `👥 الإحالات: ${u.referralCount}\n` +
     `✅ المهام المكتملة: ${u.tasksCompleted}`;
   return bot.sendMessage(chatId, info, {
-    protect_content: true,
+    
     reply_markup: {
       inline_keyboard: [
         [
@@ -367,7 +367,7 @@ export async function handleAdminCallback(
       adminConvState.set(userId, { step: "wheel_add_amount", data: { chatId, msgId } });
       await bot.sendMessage(chatId,
         "🎡 *إضافة شريحة جديدة*\n\nأدخل *المبلغ* بالـ TON (مثال: `0.5` أو `5`):",
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "w" && act === "del" && p1) {
@@ -382,7 +382,7 @@ export async function handleAdminCallback(
         adminConvState.set(userId, { step: "wheel_edit_amount", data: { slotId, chatId, msgId } });
         await bot.sendMessage(chatId,
           `✏️ تعديل شريحة *${parseFloat(slot.amount).toFixed(3)} TON*\n\nأدخل المبلغ الجديد (أو - للإبقاء على *${parseFloat(slot.amount).toFixed(3)}*):`,
-          { protect_content: true, parse_mode: "Markdown" });
+          { parse_mode: "Markdown" });
       }
     }
 
@@ -424,7 +424,7 @@ export async function handleAdminCallback(
 
     else if (sec === "t" && act === "add") {
       adminConvState.set(userId, { step: "task_title", data: { chatId, msgId } });
-      await bot.sendMessage(chatId, "📝 أدخل *عنوان المهمة*:", { protect_content: true, parse_mode: "Markdown" });
+      await bot.sendMessage(chatId, "📝 أدخل *عنوان المهمة*:", { parse_mode: "Markdown" });
     }
 
     // ── Users ──
@@ -432,35 +432,35 @@ export async function handleAdminCallback(
       adminConvState.set(userId, { step: "user_search", data: {} });
       await bot.sendMessage(chatId,
         "🔍 أدخل *Telegram ID* أو *@username* للمستخدم:",
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "u" && act === "addbal" && p1) {
       adminConvState.set(userId, { step: "user_addbal", data: { targetId: parseInt(p1) } });
       await bot.sendMessage(chatId,
         `💰 كم تريد *إضافته* لرصيد المستخدم ${p1}؟\n(مثال: 5 أو 0.5)`,
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "u" && act === "subbal" && p1) {
       adminConvState.set(userId, { step: "user_subbal", data: { targetId: parseInt(p1) } });
       await bot.sendMessage(chatId,
         `💸 كم تريد *خصمه* من رصيد المستخدم ${p1}؟\n(مثال: 5 أو 0.5)`,
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "u" && act === "bal" && p1) {
       adminConvState.set(userId, { step: "user_balance", data: { targetId: parseInt(p1) } });
       await bot.sendMessage(chatId,
         `✏️ أدخل الرصيد الجديد المحدد للمستخدم ${p1}\n(مثال: 10.5)`,
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "u" && act === "spins" && p1) {
       adminConvState.set(userId, { step: "user_spins", data: { targetId: parseInt(p1) } });
       await bot.sendMessage(chatId,
         `🎰 أدخل عدد اللفات للمستخدم ${p1}\n(مثال: 10 أو +5 أو -2)`,
-        { protect_content: true, parse_mode: "Markdown" });
+        { parse_mode: "Markdown" });
     }
 
     else if (sec === "u" && act === "ban" && p1) {
@@ -469,11 +469,11 @@ export async function handleAdminCallback(
       try {
         await bot.sendMessage(targetId,
           "🚫 تم حظر حسابك من استخدام البوت. للاستفسار تواصل مع الدعم.",
-          { protect_content: true });
+          { });
       } catch { /* user may have blocked bot */ }
       const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
       await bot.sendMessage(chatId, `🚫 تم حظر المستخدم ${u?.firstName || targetId} (${targetId}) بنجاح.`,
-        { protect_content: true });
+        { });
     }
 
     else if (sec === "u" && act === "unban" && p1) {
@@ -482,11 +482,11 @@ export async function handleAdminCallback(
       try {
         await bot.sendMessage(targetId,
           "✅ تم رفع الحظر عن حسابك. يمكنك الآن استخدام البوت مجدداً!",
-          { protect_content: true });
+          { });
       } catch { /* user may have blocked bot */ }
       const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
       await bot.sendMessage(chatId, `✅ تم رفع الحظر عن المستخدم ${u?.firstName || targetId} (${targetId}).`,
-        { protect_content: true });
+        { });
     }
 
     // ── Withdrawals ──
@@ -523,7 +523,7 @@ export async function handleAdminCallback(
     }
   } catch (err) {
     console.error("Admin callback error:", err);
-    try { await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { protect_content: true }); } catch { /* ignore */ }
+    try { await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { }); } catch { /* ignore */ }
   }
 
   return true;
@@ -544,7 +544,7 @@ export async function handleAdminText(
   const clearState = () => adminConvState.delete(userId);
 
   const send = (t: string, opts: TelegramBot.SendMessageOptions = {}) =>
-    bot.sendMessage(chatId, t, { protect_content: true, ...opts });
+    bot.sendMessage(chatId, t, { ...opts });
 
   try {
     // ── Wheel: add new slot (amount) ──
@@ -751,7 +751,7 @@ export async function handleAdminText(
     }
   } catch (err) {
     console.error("Admin text handler error:", err);
-    await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { protect_content: true });
+    await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { });
   }
 
   return false;

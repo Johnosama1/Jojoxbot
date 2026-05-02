@@ -62,7 +62,7 @@ export function initBot() {
       // Block banned users
       if (existing.length > 0 && existing[0].isVisible === false) {
         await bot.sendMessage(chatId, "🚫 حسابك محظور من استخدام هذا البوت.", {
-          protect_content: true,
+          
         });
         return;
       }
@@ -104,7 +104,7 @@ export function initBot() {
                 await bot.sendMessage(
                   referredBy,
                   `🎉 مبروك! وصلت إحالاتك إلى ${newCount} — حصلت على لفة مجانية!`,
-                  { protect_content: true }
+                  { }
                 );
               } catch { /* user may not have started bot */ }
             }
@@ -140,7 +140,7 @@ export function initBot() {
         `🎁 لديك 3 لفات مجانية للبدء!`;
 
       await bot.sendMessage(chatId, welcomeText, {
-        protect_content: true,
+        
         reply_markup: {
           inline_keyboard: [
             [{ text: "🎡 العب الآن", web_app: { url: MINI_APP_URL } }],
@@ -224,7 +224,7 @@ export function initBot() {
     await bot.sendMessage(
       msg.chat.id,
       `✅ تم تسجيلك كمالك البوت!\nID: ${userId}\nالآن يمكنك استخدام /admin للوحة التحكم`,
-      { protect_content: true }
+      { }
     );
   });
 
@@ -341,7 +341,7 @@ async function processWithdrawal(
         action === "approved"
           ? `✅ تمت الموافقة على سحبك!\n\nسيتم إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك قريباً.`
           : `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`;
-      await bot.sendMessage(wd.userId, userMsg, { protect_content: true });
+      await bot.sendMessage(wd.userId, userMsg, { });
     } catch { /* user may not be reachable */ }
   } catch (err) {
     logger.error({ err }, "Error processing withdrawal");
@@ -371,7 +371,7 @@ export async function sendWithdrawalNotification(
 
   try {
     await bot.sendMessage(ownerId, text, {
-      protect_content: true,
+      
       reply_markup: {
         inline_keyboard: [
           [
