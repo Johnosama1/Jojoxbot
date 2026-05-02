@@ -185,16 +185,18 @@ function showUserCard(
   chatId: number,
   u: typeof usersTable.$inferSelect
 ) {
+  const safeName = `${u.firstName || "—"} ${u.lastName || ""}`.trim();
+  const safeUsername = u.username ? `@${u.username}` : "—";
   const info =
-    `👤 *المستخدم #${u.id}*\n\n` +
-    `الاسم: *${u.firstName || "—"} ${u.lastName || ""}*\n` +
-    `اليوزر: @${u.username || "—"}\n` +
-    `💰 الرصيد: *${parseFloat(u.balance).toFixed(4)} TON*\n` +
-    `🎰 اللفات: *${u.spins}*\n` +
+    `👤 المستخدم رقم: ${u.id}\n\n` +
+    `الاسم: ${safeName}\n` +
+    `اليوزر: ${safeUsername}\n` +
+    `💰 الرصيد: ${parseFloat(u.balance).toFixed(4)} TON\n` +
+    `🎰 اللفات: ${u.spins}\n` +
     `👥 الإحالات: ${u.referralCount}\n` +
     `✅ المهام المكتملة: ${u.tasksCompleted}`;
   return bot.sendMessage(chatId, info, {
-    parse_mode: "Markdown",
+    parse_mode: undefined,
     reply_markup: {
       inline_keyboard: [
         [
