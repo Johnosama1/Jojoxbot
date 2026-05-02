@@ -6,11 +6,23 @@ import {
   wheelSlotsTable,
   botSettingsTable,
   withdrawalsTable,
-  userTasksTable,
 } from "@workspace/db/schema";
-import { eq, desc, sql, count, and } from "drizzle-orm";
+import { eq, desc, sql, count, ilike } from "drizzle-orm";
 
 export const OWNER_USERNAME = "J_O_H_N8";
+
+export async function checkChannelMembership(
+  bot: TelegramBot,
+  userId: number,
+  channelUsername: string
+): Promise<boolean> {
+  try {
+    const member = await bot.getChatMember(`@${channelUsername}`, userId);
+    return ["member", "administrator", "creator"].includes(member.status);
+  } catch {
+    return false;
+  }
+}
 
 interface ConvState {
   step: string;
@@ -62,8 +74,13 @@ async function editOrSend(
 }
 
 export async function showAdminMenu(bot: TelegramBot, chatId: number, messageId?: number) {
+  const [usersRes] = await db.select({ c: count() }).from(usersTable);
+  const [pendingRes] = await db.select({ c: count() }).from(withdrawalsTable).where(eq(withdrawalsTable.status, "pending"));
   const text =
-    "🎛 *لوحة التحكم — JojoX Lucky Wheel*\n\nمرحباً بك أيها الأدمن، اختر من القائمة:";
+    `🎛 *لوحة التحكم — JojoX*\n\n` +
+    `👥 المستخدمون: *${usersRes?.c ?? 0}*\n` +
+    `💸 سحوبات معلقة: *${pendingRes?.c ?? 0}*\n\n` +
+    `اختر من القائمة:`;
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       [
@@ -83,31 +100,42 @@ export async function showAdminMenu(bot: TelegramBot, chatId: number, messageId?
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
 
+// ─────────────────────────── WHEEL ───────────────────────────
+
 async function showWheelMenu(bot: TelegramBot, chatId: number, messageId?: number) {
   const slots = await db.select().from(wheelSlotsTable).orderBy(wheelSlotsTable.displayOrder);
   const total = slots.reduce((s, r) => s + r.probability, 0);
-  let text = `🎡 *إعدادات العجلة*\n\nإجمالي الاحتمالات: *${total}%*\n\n`;
+  const totalIcon = total === 100 ? "✅" : total > 100 ? "🔴" : "🟡";
+  let text = `🎡 *إعدادات العجلة*\n${totalIcon} إجمالي الاحتمالات: *${total}%* (يجب = 100%)\n\n`;
   slots.forEach((s) => {
     const icon = s.probability > 0 ? "🟢" : "⚫";
-    text += `${icon} ${parseFloat(s.amount).toFixed(2)} TON → ${s.probability}%\n`;
+    text += `${icon} ${parseFloat(s.amount).toFixed(3)} TON — *${s.probability}%*\n`;
   });
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       ...slots.map((s) => [
         {
-          text: `✏️ ${parseFloat(s.amount).toFixed(2)} TON (${s.probability}%)`,
+          text: `✏️ ${parseFloat(s.amount).toFixed(3)} TON (${s.probability}%)`,
           callback_data: `adm:w:e:${s.id}`,
+        },
+        {
+          text: `🗑️`,
+          callback_data: `adm:w:del:${s.id}`,
         },
       ]),
       [
+        { text: "➕ إضافة شريحة جديدة", callback_data: "adm:w:add" },
+      ],
+      [
         { text: "⚫ صفّر الكل", callback_data: "adm:w:zero" },
-        { text: "🧪 اختبار 0.05=100%", callback_data: "adm:w:test" },
       ],
       [{ text: "◀️ رجوع", callback_data: "adm:main" }],
     ],
   };
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
+
+// ─────────────────────────── TASKS ───────────────────────────
 
 async function showTasksMenu(bot: TelegramBot, chatId: number, messageId?: number) {
   const tasks = await db.select().from(tasksTable).orderBy(tasksTable.id);
@@ -134,18 +162,56 @@ async function showTasksMenu(bot: TelegramBot, chatId: number, messageId?: numbe
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
 
+// ─────────────────────────── USERS ───────────────────────────
+
 async function showUsersMenu(bot: TelegramBot, chatId: number, messageId?: number) {
   const [res] = await db.select({ c: count() }).from(usersTable);
   const total = res?.c ?? 0;
-  const text = `👥 *إدارة المستخدمين*\n\nإجمالي المستخدمين: *${total}*\n\nاضغط "بحث بالـ ID" لعرض بيانات أي مستخدم وتعديلها:`;
+  const text =
+    `👥 *إدارة المستخدمين*\n\n` +
+    `إجمالي المستخدمين: *${total}*\n\n` +
+    `ابحث بالـ ID أو @username:`;
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
-      [{ text: "🔍 بحث بالـ ID", callback_data: "adm:u:search" }],
+      [{ text: "🔍 بحث عن مستخدم", callback_data: "adm:u:search" }],
       [{ text: "◀️ رجوع", callback_data: "adm:main" }],
     ],
   };
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
+
+function showUserCard(
+  bot: TelegramBot,
+  chatId: number,
+  u: typeof usersTable.$inferSelect
+) {
+  const info =
+    `👤 *المستخدم #${u.id}*\n\n` +
+    `الاسم: *${u.firstName || "—"} ${u.lastName || ""}*\n` +
+    `اليوزر: @${u.username || "—"}\n` +
+    `💰 الرصيد: *${parseFloat(u.balance).toFixed(4)} TON*\n` +
+    `🎰 اللفات: *${u.spins}*\n` +
+    `👥 الإحالات: ${u.referralCount}\n` +
+    `✅ المهام المكتملة: ${u.tasksCompleted}`;
+  return bot.sendMessage(chatId, info, {
+    parse_mode: "Markdown",
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "💰 إضافة رصيد", callback_data: `adm:u:addbal:${u.id}` },
+          { text: "💸 خصم رصيد", callback_data: `adm:u:subbal:${u.id}` },
+        ],
+        [
+          { text: "✏️ تعيين رصيد محدد", callback_data: `adm:u:bal:${u.id}` },
+          { text: "🎰 تعديل اللفات", callback_data: `adm:u:spins:${u.id}` },
+        ],
+        [{ text: "◀️ رجوع للمستخدمين", callback_data: "adm:users" }],
+      ],
+    },
+  });
+}
+
+// ─────────────────────────── WITHDRAWALS ───────────────────────────
 
 async function showWithdrawalsMenu(bot: TelegramBot, chatId: number, messageId?: number) {
   const pending = await db
@@ -170,10 +236,16 @@ async function showWithdrawalsMenu(bot: TelegramBot, chatId: number, messageId?:
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
 
+// ─────────────────────────── SETTINGS ───────────────────────────
+
 async function showSettingsMenu(bot: TelegramBot, chatId: number, messageId?: number) {
   const mode = (await getSetting("withdraw_mode")) || "manual";
   const modeLabel = mode === "auto" ? "🟢 تلقائي" : "🔴 يدوي";
-  const text = `⚙️ *إعدادات البوت*\n\nوضع السحب الحالي: ${modeLabel}\n\n*يدوي* → تأكيد يدوي من المالك، التحويل يدوي.\n*تلقائي* → يتم الموافقة وتسجيل التحويل تلقائياً.`;
+  const text =
+    `⚙️ *إعدادات البوت*\n\n` +
+    `وضع السحب الحالي: ${modeLabel}\n\n` +
+    `*يدوي* → تأكيد يدوي من المالك.\n` +
+    `*تلقائي* → موافقة تلقائية.`;
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       [
@@ -186,21 +258,19 @@ async function showSettingsMenu(bot: TelegramBot, chatId: number, messageId?: nu
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
 
+// ─────────────────────────── STATS ───────────────────────────
+
 async function showStats(bot: TelegramBot, chatId: number, messageId?: number) {
   const [users] = await db.select({ c: count() }).from(usersTable);
-  const [pending] = await db
-    .select({ c: count() })
-    .from(withdrawalsTable)
-    .where(eq(withdrawalsTable.status, "pending"));
-  const [approved] = await db
-    .select({ c: count() })
-    .from(withdrawalsTable)
-    .where(eq(withdrawalsTable.status, "approved"));
-  const [tasks] = await db.select({ c: count() }).from(tasksTable);
+  const [pending] = await db.select({ c: count() }).from(withdrawalsTable).where(eq(withdrawalsTable.status, "pending"));
+  const [approved] = await db.select({ c: count() }).from(withdrawalsTable).where(eq(withdrawalsTable.status, "approved"));
+  const [tasks] = await db.select({ c: count() }).from(tasksTable).where(eq(tasksTable.isActive, true));
+  const [slots] = await db.select({ c: count() }).from(wheelSlotsTable);
   const text =
     `📊 *الإحصائيات*\n\n` +
     `👥 المستخدمون: *${users?.c ?? 0}*\n` +
-    `📋 المهام: *${tasks?.c ?? 0}*\n` +
+    `📋 المهام النشطة: *${tasks?.c ?? 0}*\n` +
+    `🎡 شرائح العجلة: *${slots?.c ?? 0}*\n` +
     `💸 سحوبات معلقة: *${pending?.c ?? 0}*\n` +
     `✅ سحوبات موافق عليها: *${approved?.c ?? 0}*`;
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
@@ -208,6 +278,8 @@ async function showStats(bot: TelegramBot, chatId: number, messageId?: number) {
   };
   await editOrSend(bot, chatId, text, keyboard, messageId);
 }
+
+// ─────────────────────────── MAIN CALLBACK HANDLER ───────────────────────────
 
 export async function handleAdminCallback(
   bot: TelegramBot,
@@ -229,94 +301,65 @@ export async function handleAdminCallback(
   await bot.answerCallbackQuery(q.id);
 
   const parts = data.split(":");
-  // parts[0] = "adm"
   const sec = parts[1];
   const act = parts[2];
   const p1 = parts[3];
-  const p2 = parts[4];
 
   try {
-    if (data === "adm:main") {
-      await showAdminMenu(bot, chatId, msgId);
-    } else if (data === "adm:wheel") {
+    // ── Main navigation ──
+    if (data === "adm:main") return (await showAdminMenu(bot, chatId, msgId), true);
+    if (data === "adm:wheel") return (await showWheelMenu(bot, chatId, msgId), true);
+    if (data === "adm:tasks") return (await showTasksMenu(bot, chatId, msgId), true);
+    if (data === "adm:users") return (await showUsersMenu(bot, chatId, msgId), true);
+    if (data === "adm:wd") return (await showWithdrawalsMenu(bot, chatId, msgId), true);
+    if (data === "adm:settings") return (await showSettingsMenu(bot, chatId, msgId), true);
+    if (data === "adm:stats") return (await showStats(bot, chatId, msgId), true);
+
+    // ── Wheel ──
+    if (data === "adm:w:zero") {
+      await db.update(wheelSlotsTable).set({ probability: 0 });
       await showWheelMenu(bot, chatId, msgId);
-    } else if (data === "adm:tasks") {
-      await showTasksMenu(bot, chatId, msgId);
-    } else if (data === "adm:users") {
-      await showUsersMenu(bot, chatId, msgId);
-    } else if (data === "adm:wd") {
-      await showWithdrawalsMenu(bot, chatId, msgId);
-    } else if (data === "adm:settings") {
-      await showSettingsMenu(bot, chatId, msgId);
-    } else if (data === "adm:stats") {
-      await showStats(bot, chatId, msgId);
     }
 
-    // === Wheel ===
-    else if (data === "adm:w:zero") {
-      await db.update(wheelSlotsTable).set({ probability: 0 });
+    else if (data === "adm:w:add") {
+      adminConvState.set(userId, { step: "wheel_add_amount", data: { chatId, msgId } });
+      await bot.sendMessage(chatId,
+        "🎡 *إضافة شريحة جديدة*\n\nأدخل *المبلغ* بالـ TON (مثال: `0.5` أو `5`):",
+        { parse_mode: "Markdown" });
+    }
+
+    else if (sec === "w" && act === "del" && p1) {
+      await db.delete(wheelSlotsTable).where(eq(wheelSlotsTable.id, parseInt(p1)));
       await showWheelMenu(bot, chatId, msgId);
-    } else if (data === "adm:w:test") {
-      await db.update(wheelSlotsTable).set({ probability: 0 });
-      const first = await db
-        .select()
-        .from(wheelSlotsTable)
-        .orderBy(wheelSlotsTable.displayOrder)
-        .limit(1);
-      if (first[0]) {
-        await db
-          .update(wheelSlotsTable)
-          .set({ probability: 100 })
-          .where(eq(wheelSlotsTable.id, first[0].id));
-      }
-      await showWheelMenu(bot, chatId, msgId);
-    } else if (sec === "w" && act === "e" && p1) {
+    }
+
+    else if (sec === "w" && act === "e" && p1) {
       const slotId = parseInt(p1);
-      const [slot] = await db
-        .select()
-        .from(wheelSlotsTable)
-        .where(eq(wheelSlotsTable.id, slotId))
-        .limit(1);
+      const [slot] = await db.select().from(wheelSlotsTable).where(eq(wheelSlotsTable.id, slotId)).limit(1);
       if (slot) {
-        adminConvState.set(userId, {
-          step: "wheel_prob",
-          data: { slotId, chatId, msgId },
-        });
-        await bot.sendMessage(
-          chatId,
-          `✏️ تعديل احتمالية *${parseFloat(slot.amount).toFixed(2)} TON*\n\nأدخل النسبة الجديدة (0–100):`,
-          { parse_mode: "Markdown" }
-        );
+        adminConvState.set(userId, { step: "wheel_edit_amount", data: { slotId, chatId, msgId } });
+        await bot.sendMessage(chatId,
+          `✏️ تعديل شريحة *${parseFloat(slot.amount).toFixed(3)} TON*\n\nأدخل المبلغ الجديد (أو `-` للإبقاء على *${parseFloat(slot.amount).toFixed(3)}*):`,
+          { parse_mode: "Markdown" });
       }
     }
 
-    // === Tasks ===
+    // ── Tasks ──
     else if (sec === "t" && act === "v" && p1) {
-      const taskId = parseInt(p1);
-      const [t] = await db
-        .select()
-        .from(tasksTable)
-        .where(eq(tasksTable.id, taskId))
-        .limit(1);
+      const [t] = await db.select().from(tasksTable).where(eq(tasksTable.id, parseInt(p1))).limit(1);
       if (t) {
         const text =
           `📋 *مهمة #${t.id}*\n\n` +
-          `العنوان: *${t.title}*\n` +
+          `${t.icon || "⭐"} *${t.title}*\n` +
           `الوصف: ${t.description || "—"}\n` +
           `الرابط: ${t.url || "—"}\n` +
-          `الأيقونة: ${t.icon || "—"}\n` +
           `الحالة: ${t.isActive ? "✅ نشطة" : "❌ معطلة"}`;
         await bot.editMessageText(text, {
-          chat_id: chatId,
-          message_id: msgId,
-          parse_mode: "Markdown",
+          chat_id: chatId, message_id: msgId, parse_mode: "Markdown",
           reply_markup: {
             inline_keyboard: [
               [
-                {
-                  text: t.isActive ? "❌ تعطيل" : "✅ تفعيل",
-                  callback_data: `adm:t:tog:${t.id}`,
-                },
+                { text: t.isActive ? "❌ تعطيل" : "✅ تفعيل", callback_data: `adm:t:tog:${t.id}` },
                 { text: "🗑️ حذف", callback_data: `adm:t:del:${t.id}` },
               ],
               [{ text: "◀️ رجوع للمهام", callback_data: "adm:tasks" }],
@@ -324,109 +367,101 @@ export async function handleAdminCallback(
           },
         });
       }
-    } else if (sec === "t" && act === "tog" && p1) {
-      const taskId = parseInt(p1);
-      const [t] = await db
-        .select()
-        .from(tasksTable)
-        .where(eq(tasksTable.id, taskId))
-        .limit(1);
-      if (t) {
-        await db
-          .update(tasksTable)
-          .set({ isActive: !t.isActive })
-          .where(eq(tasksTable.id, taskId));
-      }
-      await showTasksMenu(bot, chatId, msgId);
-    } else if (sec === "t" && act === "del" && p1) {
-      const taskId = parseInt(p1);
-      await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
-      await showTasksMenu(bot, chatId, msgId);
-    } else if (sec === "t" && act === "add") {
-      adminConvState.set(userId, { step: "task_title", data: { chatId, msgId } });
-      await bot.sendMessage(chatId, "📝 أدخل *عنوان المهمة*:", {
-        parse_mode: "Markdown",
-      });
     }
 
-    // === Users ===
+    else if (sec === "t" && act === "tog" && p1) {
+      const [t] = await db.select().from(tasksTable).where(eq(tasksTable.id, parseInt(p1))).limit(1);
+      if (t) await db.update(tasksTable).set({ isActive: !t.isActive }).where(eq(tasksTable.id, parseInt(p1)));
+      await showTasksMenu(bot, chatId, msgId);
+    }
+
+    else if (sec === "t" && act === "del" && p1) {
+      await db.delete(tasksTable).where(eq(tasksTable.id, parseInt(p1)));
+      await showTasksMenu(bot, chatId, msgId);
+    }
+
+    else if (sec === "t" && act === "add") {
+      adminConvState.set(userId, { step: "task_title", data: { chatId, msgId } });
+      await bot.sendMessage(chatId, "📝 أدخل *عنوان المهمة*:", { parse_mode: "Markdown" });
+    }
+
+    // ── Users ──
     else if (sec === "u" && act === "search") {
       adminConvState.set(userId, { step: "user_search", data: {} });
-      await bot.sendMessage(chatId, "🔍 أدخل *Telegram ID* للمستخدم:", {
-        parse_mode: "Markdown",
-      });
-    } else if (sec === "u" && act === "bal" && p1) {
-      const targetId = parseInt(p1);
-      adminConvState.set(userId, { step: "user_balance", data: { targetId } });
-      await bot.sendMessage(
-        chatId,
-        `💰 أدخل الرصيد الجديد لـ \`${targetId}\`\n_(مثال: 5.5 أو +2 أو -1)_`,
-        { parse_mode: "Markdown" }
-      );
-    } else if (sec === "u" && act === "spins" && p1) {
-      const targetId = parseInt(p1);
-      adminConvState.set(userId, { step: "user_spins", data: { targetId } });
-      await bot.sendMessage(
-        chatId,
-        `🎰 أدخل عدد اللفات لـ \`${targetId}\`\n_(مثال: 10 أو +5 أو -2)_`,
-        { parse_mode: "Markdown" }
-      );
+      await bot.sendMessage(chatId,
+        "🔍 أدخل *Telegram ID* أو *@username* للمستخدم:",
+        { parse_mode: "Markdown" });
     }
 
-    // === Withdrawals ===
+    else if (sec === "u" && act === "addbal" && p1) {
+      adminConvState.set(userId, { step: "user_addbal", data: { targetId: parseInt(p1) } });
+      await bot.sendMessage(chatId,
+        `💰 كم تريد *إضافته* لرصيد المستخدم \`${p1}\`؟\n_(مثال: 5 أو 0.5)_`,
+        { parse_mode: "Markdown" });
+    }
+
+    else if (sec === "u" && act === "subbal" && p1) {
+      adminConvState.set(userId, { step: "user_subbal", data: { targetId: parseInt(p1) } });
+      await bot.sendMessage(chatId,
+        `💸 كم تريد *خصمه* من رصيد المستخدم \`${p1}\`؟\n_(مثال: 5 أو 0.5)_`,
+        { parse_mode: "Markdown" });
+    }
+
+    else if (sec === "u" && act === "bal" && p1) {
+      adminConvState.set(userId, { step: "user_balance", data: { targetId: parseInt(p1) } });
+      await bot.sendMessage(chatId,
+        `✏️ أدخل الرصيد الجديد المحدد لـ \`${p1}\`\n_(مثال: 10.5)_`,
+        { parse_mode: "Markdown" });
+    }
+
+    else if (sec === "u" && act === "spins" && p1) {
+      adminConvState.set(userId, { step: "user_spins", data: { targetId: parseInt(p1) } });
+      await bot.sendMessage(chatId,
+        `🎰 أدخل عدد اللفات لـ \`${p1}\`\n_(مثال: 10 أو +5 أو -2)_`,
+        { parse_mode: "Markdown" });
+    }
+
+    // ── Withdrawals ──
     else if (sec === "wd" && act === "v" && p1) {
-      const wdId = parseInt(p1);
-      const [w] = await db
-        .select()
-        .from(withdrawalsTable)
-        .where(eq(withdrawalsTable.id, wdId))
-        .limit(1);
+      const [w] = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.id, parseInt(p1))).limit(1);
       if (w) {
-        const [u] = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.id, w.userId))
-          .limit(1);
+        const [u] = await db.select().from(usersTable).where(eq(usersTable.id, w.userId)).limit(1);
         const text =
           `💸 *طلب سحب #${w.id}*\n\n` +
-          `👤 الاسم: ${u?.firstName || "—"} ${u?.lastName || ""}\n` +
-          `🔗 اليوزر: @${u?.username || "—"}\n` +
-          `🆔 ID: \`${w.userId}\`\n` +
-          `💰 المبلغ: *${parseFloat(w.amount).toFixed(4)} TON*\n` +
-          `📍 المحفظة:\n\`${w.walletAddress}\`\n` +
-          `📅 التاريخ: ${new Date(w.createdAt).toLocaleString("ar")}\n` +
+          `👤 ${u?.firstName || "—"} @${u?.username || "—"}\n` +
+          `🆔 \`${w.userId}\`\n` +
+          `💰 *${parseFloat(w.amount).toFixed(4)} TON*\n` +
+          `📍 \`${w.walletAddress}\`\n` +
           `الحالة: *${w.status}*`;
         await bot.editMessageText(text, {
-          chat_id: chatId,
-          message_id: msgId,
-          parse_mode: "Markdown",
+          chat_id: chatId, message_id: msgId, parse_mode: "Markdown",
           reply_markup: {
             inline_keyboard: [
               [
                 { text: "✅ قبول", callback_data: `withdraw_approve_${w.id}` },
                 { text: "❌ رفض", callback_data: `withdraw_reject_${w.id}` },
               ],
-              [{ text: "◀️ رجوع للسحوبات", callback_data: "adm:wd" }],
+              [{ text: "◀️ رجوع", callback_data: "adm:wd" }],
             ],
           },
         });
       }
     }
 
-    // === Settings ===
+    // ── Settings ──
     else if (sec === "set" && act === "mode" && p1) {
       await setSetting("withdraw_mode", p1);
       await showSettingsMenu(bot, chatId, msgId);
     }
   } catch (err) {
     console.error("Admin callback error:", err);
-    try {
-      await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.");
-    } catch { /* ignore */ }
+    try { await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى."); } catch { /* ignore */ }
   }
 
   return true;
 }
+
+// ─────────────────────────── TEXT HANDLER ───────────────────────────
 
 export async function handleAdminText(
   bot: TelegramBot,
@@ -438,167 +473,189 @@ export async function handleAdminText(
 
   const text = msg.text?.trim() ?? "";
   const chatId = msg.chat.id;
-
   const clearState = () => adminConvState.delete(userId);
 
   try {
-    // === Wheel probability ===
-    if (state.step === "wheel_prob") {
+    // ── Wheel: add new slot (amount) ──
+    if (state.step === "wheel_add_amount") {
+      const amount = parseFloat(text);
+      if (isNaN(amount) || amount <= 0) {
+        await bot.sendMessage(chatId, "❌ أدخل رقماً صحيحاً أكبر من 0");
+        return true;
+      }
+      adminConvState.set(userId, { step: "wheel_add_prob", data: { ...state.data, amount } });
+      await bot.sendMessage(chatId,
+        `💡 المبلغ: *${amount} TON*\nالآن أدخل *الاحتمالية* (0–100):`,
+        { parse_mode: "Markdown" });
+      return true;
+    }
+
+    if (state.step === "wheel_add_prob") {
       const prob = parseInt(text);
       if (isNaN(prob) || prob < 0 || prob > 100) {
         await bot.sendMessage(chatId, "❌ أدخل رقماً بين 0 و 100");
         return true;
       }
-      await db
-        .update(wheelSlotsTable)
-        .set({ probability: prob })
-        .where(eq(wheelSlotsTable.id, state.data.slotId as number));
-      clearState();
-      await bot.sendMessage(chatId, `✅ تم تحديث الاحتمالية إلى *${prob}%*`, {
-        parse_mode: "Markdown",
+      const { amount } = state.data as { amount: number };
+      const maxOrder = await db.select({ m: sql<number>`max(display_order)` }).from(wheelSlotsTable);
+      const nextOrder = ((maxOrder[0]?.m as number) || 0) + 1;
+      await db.insert(wheelSlotsTable).values({
+        amount: String(amount),
+        probability: prob,
+        displayOrder: nextOrder,
       });
+      clearState();
+      await bot.sendMessage(chatId,
+        `✅ تمت إضافة شريحة *${amount} TON* بنسبة *${prob}%*`,
+        { parse_mode: "Markdown" });
       const tmp = await bot.sendMessage(chatId, "جاري التحميل...");
       await showWheelMenu(bot, chatId, tmp.message_id);
       return true;
     }
 
-    // === Add Task flow ===
+    // ── Wheel: edit existing slot (amount first) ──
+    if (state.step === "wheel_edit_amount") {
+      const { slotId, chatId: sChat, msgId: sMsgId } = state.data as { slotId: number; chatId: number; msgId: number };
+      const [slot] = await db.select().from(wheelSlotsTable).where(eq(wheelSlotsTable.id, slotId)).limit(1);
+      const newAmount = text === "-" ? parseFloat(slot.amount) : parseFloat(text);
+      if (isNaN(newAmount) || newAmount <= 0) {
+        await bot.sendMessage(chatId, "❌ أدخل رقماً صحيحاً أكبر من 0 أو `-` للإبقاء");
+        return true;
+      }
+      adminConvState.set(userId, { step: "wheel_edit_prob", data: { ...state.data, newAmount } });
+      await bot.sendMessage(chatId,
+        `💡 المبلغ: *${newAmount} TON*\nأدخل الاحتمالية الجديدة (0–100) أو `-` للإبقاء على *${slot.probability}%*:`,
+        { parse_mode: "Markdown" });
+      return true;
+    }
+
+    if (state.step === "wheel_edit_prob") {
+      const { slotId, newAmount, chatId: sChat, msgId: sMsgId } = state.data as {
+        slotId: number; newAmount: number; chatId: number; msgId: number;
+      };
+      const [slot] = await db.select().from(wheelSlotsTable).where(eq(wheelSlotsTable.id, slotId)).limit(1);
+      const newProb = text === "-" ? slot.probability : parseInt(text);
+      if (isNaN(newProb) || newProb < 0 || newProb > 100) {
+        await bot.sendMessage(chatId, "❌ أدخل رقماً بين 0 و 100 أو `-` للإبقاء");
+        return true;
+      }
+      await db.update(wheelSlotsTable)
+        .set({ amount: String(newAmount), probability: newProb })
+        .where(eq(wheelSlotsTable.id, slotId));
+      clearState();
+      await bot.sendMessage(chatId,
+        `✅ تم التحديث: *${newAmount} TON* — *${newProb}%*`,
+        { parse_mode: "Markdown" });
+      const tmp = await bot.sendMessage(chatId, "جاري التحميل...");
+      await showWheelMenu(bot, chatId, tmp.message_id);
+      return true;
+    }
+
+    // ── Task flow ──
     if (state.step === "task_title") {
-      adminConvState.set(userId, {
-        step: "task_desc",
-        data: { ...state.data, title: text },
-      });
-      await bot.sendMessage(
-        chatId,
-        "📝 أدخل *وصف المهمة* (أو أرسل `-` للتخطي):",
-        { parse_mode: "Markdown" }
-      );
+      adminConvState.set(userId, { step: "task_desc", data: { ...state.data, title: text } });
+      await bot.sendMessage(chatId, "📝 أدخل *وصف المهمة* (أو `-` للتخطي):", { parse_mode: "Markdown" });
       return true;
     }
     if (state.step === "task_desc") {
-      adminConvState.set(userId, {
-        step: "task_url",
-        data: { ...state.data, description: text === "-" ? null : text },
-      });
-      await bot.sendMessage(
-        chatId,
-        "🔗 أدخل *رابط المهمة* (مثال: https://t.me/channel)\nأو أرسل `-` للتخطي:",
-        { parse_mode: "Markdown" }
-      );
+      adminConvState.set(userId, { step: "task_url", data: { ...state.data, description: text === "-" ? null : text } });
+      await bot.sendMessage(chatId, "🔗 أدخل *رابط المهمة* (مثال: https://t.me/...) أو `-`:", { parse_mode: "Markdown" });
       return true;
     }
     if (state.step === "task_url") {
-      adminConvState.set(userId, {
-        step: "task_icon",
-        data: { ...state.data, url: text === "-" ? null : text },
-      });
-      await bot.sendMessage(
-        chatId,
-        "🎨 أدخل *أيقونة* المهمة (emoji) أو `-` للتخطي:",
-        { parse_mode: "Markdown" }
-      );
+      adminConvState.set(userId, { step: "task_icon", data: { ...state.data, url: text === "-" ? null : text } });
+      await bot.sendMessage(chatId, "🎨 أدخل *أيقونة* (emoji) أو `-`:", { parse_mode: "Markdown" });
       return true;
     }
     if (state.step === "task_icon") {
-      const { title, description, url } = state.data as {
-        title: string;
-        description: string | null;
-        url: string | null;
-      };
+      const { title, description, url } = state.data as { title: string; description: string | null; url: string | null };
       const icon = text === "-" ? "⭐" : text;
-      await db.insert(tasksTable).values({
-        title,
-        description,
-        url,
-        icon,
-        isActive: true,
-      });
+      await db.insert(tasksTable).values({ title, description, url, icon, isActive: true });
       clearState();
-      await bot.sendMessage(chatId, `✅ تمت إضافة المهمة: *${title}*`, {
-        parse_mode: "Markdown",
-      });
+      await bot.sendMessage(chatId, `✅ تمت إضافة المهمة: *${title}*`, { parse_mode: "Markdown" });
       const tmp = await bot.sendMessage(chatId, "جاري التحميل...");
       await showTasksMenu(bot, chatId, tmp.message_id);
       return true;
     }
 
-    // === User search ===
+    // ── User search (by ID or @username) ──
     if (state.step === "user_search") {
-      const targetId = parseInt(text);
       clearState();
-      if (isNaN(targetId)) {
-        await bot.sendMessage(chatId, "❌ ID غير صحيح");
-        return true;
+      let u: typeof usersTable.$inferSelect | undefined;
+
+      if (text.startsWith("@")) {
+        const uname = text.replace("@", "");
+        const results = await db.select().from(usersTable).where(ilike(usersTable.username, uname)).limit(1);
+        u = results[0];
+      } else {
+        const targetId = parseInt(text);
+        if (isNaN(targetId)) {
+          await bot.sendMessage(chatId, "❌ أدخل ID رقمي أو @username صحيح");
+          return true;
+        }
+        const results = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+        u = results[0];
       }
-      const [u] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, targetId))
-        .limit(1);
+
       if (!u) {
-        await bot.sendMessage(chatId, `❌ لا يوجد مستخدم بـ ID: \`${targetId}\``, {
-          parse_mode: "Markdown",
-        });
+        await bot.sendMessage(chatId, `❌ لم يُعثر على مستخدم بهذا المعرّف`, { parse_mode: "Markdown" });
         return true;
       }
-      const info =
-        `👤 *المستخدم #${u.id}*\n\n` +
-        `الاسم: *${u.firstName || "—"} ${u.lastName || ""}*\n` +
-        `اليوزر: @${u.username || "—"}\n` +
-        `💰 الرصيد: *${parseFloat(u.balance).toFixed(4)} TON*\n` +
-        `🎰 اللفات: *${u.spins}*\n` +
-        `👥 الإحالات: ${u.referralCount}\n` +
-        `✅ المهام المكتملة: ${u.tasksCompleted}`;
-      await bot.sendMessage(chatId, info, {
-        parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "💰 تعديل الرصيد", callback_data: `adm:u:bal:${u.id}` },
-              { text: "🎰 تعديل اللفات", callback_data: `adm:u:spins:${u.id}` },
-            ],
-            [{ text: "◀️ رجوع للمستخدمين", callback_data: "adm:users" }],
-          ],
-        },
-      });
+      await showUserCard(bot, chatId, u);
       return true;
     }
 
-    // === User balance ===
+    // ── Add balance ──
+    if (state.step === "user_addbal") {
+      const { targetId } = state.data as { targetId: number };
+      clearState();
+      const val = parseFloat(text);
+      if (isNaN(val) || val <= 0) {
+        await bot.sendMessage(chatId, "❌ أدخل قيمة موجبة صحيحة");
+        return true;
+      }
+      await db.update(usersTable).set({ balance: sql`balance + ${val}` }).where(eq(usersTable.id, targetId));
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(chatId,
+        `✅ تمت إضافة *${val} TON* لـ \`${targetId}\`\nالرصيد الجديد: *${parseFloat(u.balance).toFixed(4)} TON*`,
+        { parse_mode: "Markdown" });
+      return true;
+    }
+
+    // ── Subtract balance ──
+    if (state.step === "user_subbal") {
+      const { targetId } = state.data as { targetId: number };
+      clearState();
+      const val = parseFloat(text);
+      if (isNaN(val) || val <= 0) {
+        await bot.sendMessage(chatId, "❌ أدخل قيمة موجبة صحيحة");
+        return true;
+      }
+      await db.update(usersTable).set({ balance: sql`GREATEST(balance - ${val}, 0)` }).where(eq(usersTable.id, targetId));
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(chatId,
+        `✅ تم خصم *${val} TON* من \`${targetId}\`\nالرصيد الجديد: *${parseFloat(u.balance).toFixed(4)} TON*`,
+        { parse_mode: "Markdown" });
+      return true;
+    }
+
+    // ── Set exact balance ──
     if (state.step === "user_balance") {
       const { targetId } = state.data as { targetId: number };
       clearState();
-      let isRelative = text.startsWith("+") || text.startsWith("-");
       const val = parseFloat(text);
-      if (isNaN(val)) {
-        await bot.sendMessage(chatId, "❌ قيمة غير صحيحة");
+      if (isNaN(val) || val < 0) {
+        await bot.sendMessage(chatId, "❌ أدخل قيمة صحيحة (0 أو أكبر)");
         return true;
       }
-      if (isRelative) {
-        await db
-          .update(usersTable)
-          .set({ balance: sql`balance + ${val}` })
-          .where(eq(usersTable.id, targetId));
-      } else {
-        await db
-          .update(usersTable)
-          .set({ balance: String(val) })
-          .where(eq(usersTable.id, targetId));
-      }
-      const [u] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, targetId))
-        .limit(1);
-      await bot.sendMessage(
-        chatId,
-        `✅ تم تحديث رصيد المستخدم \`${targetId}\`\nالرصيد الجديد: *${parseFloat(u.balance).toFixed(4)} TON*`,
-        { parse_mode: "Markdown" }
-      );
+      await db.update(usersTable).set({ balance: String(val) }).where(eq(usersTable.id, targetId));
+      await bot.sendMessage(chatId,
+        `✅ تم تعيين رصيد \`${targetId}\` إلى *${val} TON*`,
+        { parse_mode: "Markdown" });
       return true;
     }
 
-    // === User spins ===
+    // ── User spins ──
     if (state.step === "user_spins") {
       const { targetId } = state.data as { targetId: number };
       clearState();
@@ -609,26 +666,14 @@ export async function handleAdminText(
         return true;
       }
       if (isRelative) {
-        await db
-          .update(usersTable)
-          .set({ spins: sql`spins + ${val}` })
-          .where(eq(usersTable.id, targetId));
+        await db.update(usersTable).set({ spins: sql`spins + ${val}` }).where(eq(usersTable.id, targetId));
       } else {
-        await db
-          .update(usersTable)
-          .set({ spins: val })
-          .where(eq(usersTable.id, targetId));
+        await db.update(usersTable).set({ spins: val }).where(eq(usersTable.id, targetId));
       }
-      const [u] = await db
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.id, targetId))
-        .limit(1);
-      await bot.sendMessage(
-        chatId,
-        `✅ تم تحديث لفات المستخدم \`${targetId}\`\nاللفات الجديدة: *${u.spins}*`,
-        { parse_mode: "Markdown" }
-      );
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(chatId,
+        `✅ تم تحديث لفات \`${targetId}\`\nاللفات الجديدة: *${u.spins}*`,
+        { parse_mode: "Markdown" });
       return true;
     }
   } catch (err) {
@@ -637,21 +682,5 @@ export async function handleAdminText(
     await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.");
   }
 
-  return true;
-}
-
-export async function checkChannelMembership(
-  bot: TelegramBot,
-  userId: number,
-  channelUsername: string
-): Promise<boolean> {
-  try {
-    const handle = channelUsername.startsWith("@")
-      ? channelUsername
-      : `@${channelUsername}`;
-    const member = await bot.getChatMember(handle, userId);
-    return ["member", "administrator", "creator"].includes(member.status);
-  } catch {
-    return false;
-  }
+  return false;
 }
