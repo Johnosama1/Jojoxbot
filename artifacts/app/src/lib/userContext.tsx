@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { api, User } from "./api";
+import { api, User, getWheelSlotsOnce } from "./api";
 import { getTelegramUser, initTelegramApp, getMockUser } from "./telegram";
 
 interface UserContextType {
@@ -29,6 +29,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       initTelegramApp();
       const tgUser = getTelegramUser() ?? getMockUser();
+
+      // Pre-fetch wheel slots in parallel with user init (warms the cache)
+      getWheelSlotsOnce().catch(() => {});
 
       const u = await api.initUser({
         id: tgUser.id,

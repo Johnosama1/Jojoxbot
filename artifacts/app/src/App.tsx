@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserProvider, useUser } from "./lib/userContext";
 import TabBar from "./components/TabBar";
@@ -36,18 +36,39 @@ function BannedScreen() {
   );
 }
 
-function Router() {
+const ROUTES = [
+  { path: "/", Component: HomePage },
+  { path: "/tasks", Component: TasksPage },
+  { path: "/referral", Component: ReferralPage },
+  { path: "/account", Component: AccountPage },
+  { path: "/admin", Component: AdminPage },
+];
+
+function PersistentRouter() {
+  const [location] = useLocation();
   const { banned } = useUser();
   if (banned) return <BannedScreen />;
   return (
     <>
-      <Switch>
-        <Route path="/" component={HomePage} />
-        <Route path="/tasks" component={TasksPage} />
-        <Route path="/referral" component={ReferralPage} />
-        <Route path="/account" component={AccountPage} />
-        <Route path="/admin" component={AdminPage} />
-      </Switch>
+      {ROUTES.map(({ path, Component }) => {
+        const isActive =
+          path === "/"
+            ? location === "/" || location === ""
+            : location === path || location.startsWith(path + "/");
+        return (
+          <div
+            key={path}
+            style={{
+              display: isActive ? "flex" : "none",
+              flexDirection: "column",
+              flex: 1,
+              overflow: "hidden",
+            }}
+          >
+            <Component />
+          </div>
+        );
+      })}
       <TabBar />
     </>
   );
@@ -60,7 +81,7 @@ function App() {
         <AnimatedBackground />
         <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <PersistentRouter />
           </WouterRouter>
         </div>
       </UserProvider>

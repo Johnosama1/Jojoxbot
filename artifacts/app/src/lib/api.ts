@@ -1,5 +1,12 @@
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
+// Module-level cache — fetched once, shared across all component mounts
+let _slotsCache: Promise<WheelSlot[]> | null = null;
+export function getWheelSlotsOnce(): Promise<WheelSlot[]> {
+  if (!_slotsCache) _slotsCache = apiCall<WheelSlot[]>("/wheel");
+  return _slotsCache;
+}
+
 export async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },

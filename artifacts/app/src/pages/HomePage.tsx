@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
-import { api, WheelSlot } from "../lib/api";
+import { api, WheelSlot, getWheelSlotsOnce } from "../lib/api";
 import WheelCanvas from "../components/WheelCanvas";
 
 export default function HomePage() {
@@ -13,7 +13,7 @@ export default function HomePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.getWheelSlots().then(setSlots).catch(console.error);
+    getWheelSlotsOnce().then(setSlots).catch(console.error);
   }, []);
 
   const handleSpin = async () => {

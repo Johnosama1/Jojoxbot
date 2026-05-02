@@ -67,9 +67,67 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
   const isSpinningRef = useRef(false);
   const glowFrameRef = useRef(0);
 
+  const drawSkeleton = (glowFrame = 0) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.width, H = canvas.height, cx = W / 2, cy = H / 2;
+    const outerR = Math.min(cx, cy) - 16;
+    ctx.clearRect(0, 0, W, H);
+
+    // Ambient glow
+    const glowPulse = 0.25 + 0.12 * Math.sin(glowFrame * 0.06);
+    const glowGrad = ctx.createRadialGradient(cx, cy, outerR - 5, cx, cy, outerR + 22);
+    glowGrad.addColorStop(0, `rgba(34,197,94,${glowPulse})`);
+    glowGrad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.beginPath(); ctx.arc(cx, cy, outerR + 22, 0, 2 * Math.PI);
+    ctx.fillStyle = glowGrad; ctx.fill();
+
+    // Skeleton disc
+    const discGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR);
+    discGrad.addColorStop(0, "rgba(20,60,30,0.55)");
+    discGrad.addColorStop(1, "rgba(5,20,10,0.70)");
+    ctx.beginPath(); ctx.arc(cx, cy, outerR, 0, 2 * Math.PI);
+    ctx.fillStyle = discGrad; ctx.fill();
+
+    // Outer ring
+    ctx.beginPath(); ctx.arc(cx, cy, outerR + 1, 0, 2 * Math.PI);
+    ctx.strokeStyle = "rgba(34,197,94,0.65)"; ctx.lineWidth = 3.5;
+    ctx.shadowColor = "rgba(34,197,94,0.5)";
+    ctx.shadowBlur = 10 + 5 * Math.sin(glowFrame * 0.07);
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    // Hub
+    const hubR = outerR * 0.22;
+    const hubGrad = ctx.createRadialGradient(cx - hubR * 0.15, cy - hubR * 0.15, 0, cx, cy, hubR * 1.5);
+    hubGrad.addColorStop(0, "#0a2e18"); hubGrad.addColorStop(1, "#020e06");
+    ctx.beginPath(); ctx.arc(cx, cy, hubR * 1.5, 0, 2 * Math.PI);
+    ctx.fillStyle = hubGrad; ctx.fill();
+    ctx.strokeStyle = `rgba(34,197,94,${0.4 + 0.2 * Math.sin(glowFrame * 0.08)})`;
+    ctx.lineWidth = 2; ctx.shadowColor = "rgba(34,197,94,0.5)"; ctx.shadowBlur = 8;
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    // X logo
+    ctx.save();
+    ctx.font = `900 ${hubR * 1.6}px Arial`;
+    ctx.fillStyle = "rgba(251,191,36,0.90)"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(251,191,36,0.7)"; ctx.shadowBlur = 12;
+    ctx.fillText("✕", cx, cy); ctx.shadowBlur = 0; ctx.restore();
+
+    // Pointer arrow
+    ctx.save(); ctx.translate(cx, cy - outerR - 2);
+    ctx.beginPath(); ctx.moveTo(0, 17); ctx.lineTo(-12, -6); ctx.lineTo(12, -6); ctx.closePath();
+    const pGrad = ctx.createLinearGradient(-12, -6, 12, 17);
+    pGrad.addColorStop(0, "#fcd34d"); pGrad.addColorStop(1, "#b45309");
+    ctx.fillStyle = pGrad; ctx.shadowColor = "rgba(251,191,36,0.8)"; ctx.shadowBlur = 12;
+    ctx.fill(); ctx.shadowBlur = 0; ctx.restore();
+  };
+
   const drawWheel = (rotation: number, glowFrame = 0) => {
     const canvas = canvasRef.current;
-    if (!canvas || slots.length === 0) return;
+    if (!canvas) return;
+    if (slots.length === 0) { drawSkeleton(glowFrame); return; }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
