@@ -48,7 +48,7 @@ export default function ReferralPage() {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 30, boxShadow: "0 0 24px rgba(16,185,129,0.20)",
         }}>
-          🤝
+          ✉️
         </div>
         <h1 className="gold-text" style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>الإحالة</h1>
         <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginTop: 4 }}>

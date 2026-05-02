@@ -60,6 +60,15 @@ export default function TasksPage() {
 
       {/* ── Header ── */}
       <div className="text-center slide-up">
+        <div style={{
+          width: 64, height: 64, borderRadius: 20, margin: "0 auto 10px",
+          background: "linear-gradient(135deg, rgba(251,191,36,0.20), rgba(0,0,0,0.30))",
+          border: "1px solid rgba(251,191,36,0.30)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 30, boxShadow: "0 0 24px rgba(251,191,36,0.20)",
+        }}>
+          ✍️
+        </div>
         <h1 className="gold-text" style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>المهام</h1>
         <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginTop: 4 }}>
           أكمل 5 مهام واحصل على لفة مجانية 🎡
