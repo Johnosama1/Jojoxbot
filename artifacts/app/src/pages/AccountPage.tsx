@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
 import { api, Withdrawal, getWithdrawalsOnce, invalidateUserCaches } from "../lib/api";
-import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList, Zap, Users, Trophy } from "lucide-react";
+import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
 const TON_ADDRESS_REGEX = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
@@ -150,10 +150,10 @@ export default function AccountPage() {
           }}
         >
           {[
-            { label: "لفات", value: user?.spins ?? 0, color: "#fbbf24", Icon: Zap },
-            { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981", Icon: Users },
-            { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6", Icon: Trophy },
-          ].map(({ label, value, color, Icon }, i, arr) => (
+            { label: "لفات", value: user?.spins ?? 0, color: "#fbbf24", emoji: "⚡" },
+            { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981", emoji: "🫂" },
+            { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6", emoji: "🏆" },
+          ].map(({ label, value, color, emoji }, i, arr) => (
             <div
               key={label}
               style={{
@@ -161,7 +161,7 @@ export default function AccountPage() {
                 borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.09)" : "none",
               }}
             >
-              <Icon size={14} color={color} style={{ margin: "0 auto 4px" }} />
+              <div style={{ fontSize: 16, lineHeight: 1, margin: "0 auto 4px" }}>{emoji}</div>
               <div style={{ color, fontWeight: 900, fontSize: 22 }}>{value}</div>
               <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: 0.5 }}>
                 {label}
