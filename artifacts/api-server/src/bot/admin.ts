@@ -215,27 +215,60 @@ function showUserCard(
 
 // ─────────────────────────── WITHDRAWALS ───────────────────────────
 
-async function showWithdrawalsMenu(bot: TelegramBot, chatId: number, messageId?: number) {
-  const pending = await db
-    .select()
-    .from(withdrawalsTable)
-    .where(eq(withdrawalsTable.status, "pending"))
-    .orderBy(desc(withdrawalsTable.createdAt))
-    .limit(10);
-  let text = `💸 *طلبات السحب المعلقة*\nعدد الطلبات: *${pending.length}*\n\n`;
-  if (pending.length === 0) text += "لا توجد طلبات معلقة.";
-  const keyboard: TelegramBot.InlineKeyboardMarkup = {
-    inline_keyboard: [
-      ...pending.map((w) => [
-        {
-          text: `#${w.id} — ${parseFloat(w.amount).toFixed(2)} TON (ID: ${w.userId})`,
-          callback_data: `adm:wd:v:${w.id}`,
-        },
-      ]),
-      [{ text: "◀️ رجوع", callback_data: "adm:main" }],
-    ],
-  };
-  await editOrSend(bot, chatId, text, keyboard, messageId);
+async function showWithdrawalsMenu(bot: TelegramBot, chatId: number, messageId?: number, tab: "pending" | "all" = "pending") {
+  const statusIcon = (s: string) => s === "pending" ? "⏳" : s === "approved" ? "✅" : "❌";
+
+  if (tab === "all") {
+    const all = await db
+      .select()
+      .from(withdrawalsTable)
+      .orderBy(desc(withdrawalsTable.createdAt))
+      .limit(15);
+    let text = `📋 سجل جميع السحوبات (آخر ${all.length})\n\n`;
+    if (all.length === 0) {
+      text += "لا توجد سحوبات بعد.";
+    } else {
+      all.forEach((w) => {
+        text += `${statusIcon(w.status)} #${w.id} — ${parseFloat(w.amount).toFixed(3)} TON — ID: ${w.userId}\n`;
+      });
+    }
+    const keyboard: TelegramBot.InlineKeyboardMarkup = {
+      inline_keyboard: [
+        ...all.map((w) => [
+          { text: `${statusIcon(w.status)} #${w.id} — ${parseFloat(w.amount).toFixed(2)} TON`, callback_data: `adm:wd:v:${w.id}` },
+        ]),
+        [
+          { text: "⏳ المعلقة", callback_data: "adm:wd" },
+          { text: "📋 الكل ✓", callback_data: "adm:wd:all" },
+        ],
+        [{ text: "◀️ رجوع", callback_data: "adm:main" }],
+      ],
+    };
+    await editOrSend(bot, chatId, text, keyboard, messageId);
+  } else {
+    const pending = await db
+      .select()
+      .from(withdrawalsTable)
+      .where(eq(withdrawalsTable.status, "pending"))
+      .orderBy(desc(withdrawalsTable.createdAt))
+      .limit(10);
+    const [allRes] = await db.select({ c: count() }).from(withdrawalsTable);
+    let text = `💸 طلبات السحب المعلقة\nمعلق: ${pending.length} | إجمالي: ${allRes?.c ?? 0}\n\n`;
+    if (pending.length === 0) text += "لا توجد طلبات معلقة.";
+    const keyboard: TelegramBot.InlineKeyboardMarkup = {
+      inline_keyboard: [
+        ...pending.map((w) => [
+          { text: `⏳ #${w.id} — ${parseFloat(w.amount).toFixed(2)} TON (${w.userId})`, callback_data: `adm:wd:v:${w.id}` },
+        ]),
+        [
+          { text: "⏳ المعلقة ✓", callback_data: "adm:wd" },
+          { text: "📋 الكل", callback_data: "adm:wd:all" },
+        ],
+        [{ text: "◀️ رجوع", callback_data: "adm:main" }],
+      ],
+    };
+    await editOrSend(bot, chatId, text, keyboard, messageId);
+  }
 }
 
 // ─────────────────────────── SETTINGS ───────────────────────────
@@ -313,7 +346,8 @@ export async function handleAdminCallback(
     if (data === "adm:wheel") return (await showWheelMenu(bot, chatId, msgId), true);
     if (data === "adm:tasks") return (await showTasksMenu(bot, chatId, msgId), true);
     if (data === "adm:users") return (await showUsersMenu(bot, chatId, msgId), true);
-    if (data === "adm:wd") return (await showWithdrawalsMenu(bot, chatId, msgId), true);
+    if (data === "adm:wd") return (await showWithdrawalsMenu(bot, chatId, msgId, "pending"), true);
+    if (data === "adm:wd:all") return (await showWithdrawalsMenu(bot, chatId, msgId, "all"), true);
     if (data === "adm:settings") return (await showSettingsMenu(bot, chatId, msgId), true);
     if (data === "adm:stats") return (await showStats(bot, chatId, msgId), true);
 

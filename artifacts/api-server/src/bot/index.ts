@@ -352,28 +352,22 @@ export async function sendWithdrawalNotification(
   withdrawalId: number
 ) {
   if (!bot) return;
+  const uname = user.username ? `@${user.username}` : "—";
   const text =
-    `💸 *طلب سحب جديد #${withdrawalId}*\n\n` +
-    `👤 الاسم: ${user.firstName}\n` +
-    `🔗 اليوزر: @${user.username || "—"}\n` +
-    `🆔 ID: \`${user.id}\`\n` +
-    `💰 المبلغ: *${parseFloat(amount).toFixed(4)} TON*\n` +
-    `📍 المحفظة:\n\`${wallet}\``;
+    `💸 طلب سحب جديد #${withdrawalId}\n\n` +
+    `👤 الاسم: ${user.firstName || "—"}\n` +
+    `🔗 اليوزر: ${uname}\n` +
+    `🆔 ID: ${user.id}\n` +
+    `💰 المبلغ: ${parseFloat(amount).toFixed(4)} TON\n` +
+    `📍 المحفظة:\n${wallet}`;
 
   try {
     await bot.sendMessage(ownerId, text, {
-      parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [
           [
-            {
-              text: "✅ قبول",
-              callback_data: `withdraw_approve_${withdrawalId}`,
-            },
-            {
-              text: "❌ رفض",
-              callback_data: `withdraw_reject_${withdrawalId}`,
-            },
+            { text: "✅ قبول", callback_data: `withdraw_approve_${withdrawalId}` },
+            { text: "❌ رفض", callback_data: `withdraw_reject_${withdrawalId}` },
           ],
         ],
       },
