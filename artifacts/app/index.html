@@ -10,6 +10,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      // Tell Telegram we're ready IMMEDIATELY so it hides the gray native loader
+      // and shows our HTML splash screen instead.
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+          window.Telegram.WebApp.setBackgroundColor('#020e06');
+          window.Telegram.WebApp.setHeaderColor('#020e06');
+        }
+      } catch(e) {}
+    </script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html, body {
