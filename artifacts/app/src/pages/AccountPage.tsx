@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
-import { api } from "../lib/api";
-import { Wallet, Send, CheckCircle, Coins } from "lucide-react";
+import { api, Withdrawal } from "../lib/api";
+import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
 const TON_ADDRESS_REGEX = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
 function isValidTonAddress(addr: string): boolean {
   return TON_ADDRESS_REGEX.test(addr.trim());
+}
+
+function statusBadge(status: string) {
+  if (status === "approved") return { label: "تمت الموافقة", color: "#10b981", bg: "rgba(16,185,129,0.13)", border: "rgba(16,185,129,0.35)" };
+  if (status === "rejected") return { label: "مرفوض", color: "#f87171", bg: "rgba(248,113,113,0.13)", border: "rgba(248,113,113,0.35)" };
+  return { label: "قيد المراجعة", color: "#fbbf24", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.35)" };
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("ar-EG", { day: "numeric", month: "short", year: "numeric" });
 }
 
 export default function AccountPage() {
@@ -16,6 +27,17 @@ export default function AccountPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoadingHistory(true);
+    api.getUserWithdrawals(user.id)
+      .then(setWithdrawals)
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  }, [user?.id, success]);
 
   const balance = parseFloat(user?.balance || "0");
   const canWithdraw = balance >= MIN_WITHDRAWAL;
@@ -251,6 +273,78 @@ export default function AccountPage() {
         <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, margin: 0 }}>
           يتم مراجعة طلبات السحب يدوياً من قِبل المالك وإرسال TON لمحفظتك.
         </p>
+      </div>
+
+      {/* ── Withdrawal History ── */}
+      <div className="glass slide-up" style={{ padding: "20px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <ClipboardList size={16} color="#fbbf24" />
+          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>سجل السحوبات</span>
+          {withdrawals.length > 0 && (
+            <span style={{
+              marginRight: "auto",
+              background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.30)",
+              color: "#fbbf24", fontSize: 11, fontWeight: 700,
+              padding: "2px 10px", borderRadius: 999,
+            }}>
+              {withdrawals.length} طلب
+            </span>
+          )}
+        </div>
+
+        {loadingHistory ? (
+          <div style={{ textAlign: "center", padding: "20px 0", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
+            <Clock size={20} style={{ marginBottom: 6, opacity: 0.4 }} />
+            <div>جاري التحميل...</div>
+          </div>
+        ) : withdrawals.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0" }}>
+            <ClipboardList size={32} style={{ color: "rgba(255,255,255,0.15)", marginBottom: 8 }} />
+            <p style={{ color: "rgba(255,255,255,0.30)", fontSize: 13, margin: 0 }}>لا توجد سحوبات بعد</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {withdrawals.map((w) => {
+              const badge = statusBadge(w.status);
+              const shortWallet = w.walletAddress.slice(0, 6) + "..." + w.walletAddress.slice(-5);
+              return (
+                <div
+                  key={w.id}
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.09)",
+                    borderRadius: 14, padding: "12px 14px",
+                    display: "flex", flexDirection: "column", gap: 7,
+                  }}
+                >
+                  {/* Top row: amount + status */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ color: "#fbbf24", fontWeight: 900, fontSize: 17 }}>
+                      {parseFloat(w.amount).toFixed(4)}
+                      <span style={{ color: "rgba(251,191,36,0.60)", fontSize: 11, fontWeight: 600, marginRight: 4 }}>TON</span>
+                    </span>
+                    <span style={{
+                      background: badge.bg, border: `1px solid ${badge.border}`,
+                      color: badge.color, fontSize: 11, fontWeight: 700,
+                      padding: "3px 10px", borderRadius: 999,
+                    }}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  {/* Bottom row: wallet + date */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}>
+                      {shortWallet}
+                    </span>
+                    <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 11 }}>
+                      {formatDate(w.createdAt)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
