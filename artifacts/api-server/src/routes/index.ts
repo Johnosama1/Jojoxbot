@@ -5,6 +5,7 @@ import tasksRouter from "./tasks";
 import wheelRouter from "./wheel";
 import withdrawalsRouter from "./withdrawals";
 import adminRouter from "./admin";
+import stickerRouter from "./sticker";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use("/tasks", tasksRouter);
 router.use("/wheel", wheelRouter);
 router.use("/withdrawals", withdrawalsRouter);
 router.use("/admin", adminRouter);
+router.use("/sticker", stickerRouter);
 
 export default router;

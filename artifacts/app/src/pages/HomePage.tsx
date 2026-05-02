@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useUser } from "../lib/userContext";
 import { api } from "../lib/api";
 import WheelCanvas from "../components/WheelCanvas";
+import TgEmoji from "../components/TgEmoji";
 
 export default function HomePage() {
   const { user, refresh, slots } = useUser();
@@ -110,10 +111,10 @@ export default function HomePage() {
       {/* ── Stats row ── */}
       <div className="w-full grid grid-cols-3 gap-2.5 px-4 mt-4">
         {[
-          { label: "لفات", value: spins, color: "#fbbf24", emoji: "⚡", bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.22)" },
-          { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981", emoji: "🫂", bg: "rgba(16,185,129,0.10)", border: "rgba(16,185,129,0.22)" },
-          { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6", emoji: "🏆", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.22)" },
-        ].map(({ label, value, color, emoji, bg, border }) => (
+          { label: "لفات", value: spins, color: "#fbbf24", emoji: "⚡", emojiId: "5224607267797606837", bg: "rgba(251,191,36,0.10)", border: "rgba(251,191,36,0.22)" },
+          { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981", emoji: "🫂", emojiId: "5285313465135669781", bg: "rgba(16,185,129,0.10)", border: "rgba(16,185,129,0.22)" },
+          { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6", emoji: "🏆", emojiId: "6131757897480148214", bg: "rgba(59,130,246,0.10)", border: "rgba(59,130,246,0.22)" },
+        ].map(({ label, value, color, emoji, emojiId, bg, border }) => (
           <div
             key={label}
             className="text-center"
@@ -125,7 +126,7 @@ export default function HomePage() {
               backdropFilter: "blur(12px)",
             }}
           >
-            <div style={{ fontSize: 16, lineHeight: 1, margin: "0 auto 4px" }}>{emoji}</div>
+            <TgEmoji id={emojiId} fallback={emoji} size={20} style={{ margin: "0 auto 4px" }} />
             <div style={{ color, fontWeight: 900, fontSize: 22, lineHeight: 1 }}>
               {value}
             </div>

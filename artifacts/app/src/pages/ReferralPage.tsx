@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
 import { api } from "../lib/api";
 import { Users, Copy, CheckCheck, Zap, Gift, Share2, Link2 } from "lucide-react";
+import TgEmoji from "../components/TgEmoji";
 
 export default function ReferralPage() {
   const { user } = useUser();
@@ -48,7 +49,7 @@ export default function ReferralPage() {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 30, boxShadow: "0 0 24px rgba(16,185,129,0.20)",
         }}>
-          ✉️
+          <TgEmoji id="5474371208176737086" fallback="✉️" size={30} />
         </div>
         <h1 className="gold-text" style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>الإحالة</h1>
         <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginTop: 4 }}>
