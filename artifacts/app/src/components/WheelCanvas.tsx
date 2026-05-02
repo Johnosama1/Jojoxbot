@@ -9,18 +9,18 @@ interface WheelCanvasProps {
 }
 
 const SEGMENT_COLORS = [
-  { bg: "#7c5c00", bgLight: "#ffd700", text: "#ffffff" }, // deep gold
-  { bg: "#e8e8e8", bgLight: "#ffffff", text: "#7c5c00" }, // pure white → gold text
-  { bg: "#9a7200", bgLight: "#ffe44d", text: "#ffffff" }, // warm gold
-  { bg: "#d4d4d4", bgLight: "#f9f9f9", text: "#8a6500" }, // soft white → gold text
-  { bg: "#6b4e00", bgLight: "#ffc000", text: "#ffffff" }, // dark amber
-  { bg: "#ebebeb", bgLight: "#ffffff", text: "#6b4e00" }, // white → amber text
-  { bg: "#8a6500", bgLight: "#ffd700", text: "#ffffff" }, // gold
-  { bg: "#e0e0e0", bgLight: "#f8f8f8", text: "#7c5c00" }, // white
-  { bg: "#b38900", bgLight: "#ffe566", text: "#ffffff" }, // light gold
-  { bg: "#d8d8d8", bgLight: "#ffffff", text: "#9a7200" }, // white → deep gold text
-  { bg: "#7c5c00", bgLight: "#ffc62b", text: "#ffffff" }, // amber
-  { bg: "#e6e6e6", bgLight: "#ffffff", text: "#7c5c00" }, // white
+  { bg: "rgba(180,140,0,0.38)",  bgLight: "rgba(255,220,80,0.55)",  text: "#ffe9a0" }, // muted gold
+  { bg: "rgba(255,255,255,0.12)", bgLight: "rgba(255,255,255,0.28)", text: "#f5e6b8" }, // frosted white
+  { bg: "rgba(160,120,0,0.35)",  bgLight: "rgba(255,210,60,0.50)",  text: "#ffe9a0" }, // warm gold
+  { bg: "rgba(255,255,255,0.10)", bgLight: "rgba(240,235,210,0.26)", text: "#e8d99a" }, // soft ivory
+  { bg: "rgba(140,100,0,0.40)",  bgLight: "rgba(230,180,40,0.52)",  text: "#ffe9a0" }, // amber muted
+  { bg: "rgba(255,255,255,0.13)", bgLight: "rgba(255,250,230,0.30)", text: "#e8d99a" }, // frosted ivory
+  { bg: "rgba(170,130,0,0.36)",  bgLight: "rgba(255,215,70,0.50)",  text: "#ffe9a0" }, // gold
+  { bg: "rgba(255,255,255,0.11)", bgLight: "rgba(245,240,220,0.27)", text: "#f0e0a8" }, // white glass
+  { bg: "rgba(150,110,0,0.38)",  bgLight: "rgba(240,200,60,0.50)",  text: "#ffe9a0" }, // deep amber
+  { bg: "rgba(255,255,255,0.12)", bgLight: "rgba(255,248,225,0.28)", text: "#e8d99a" }, // soft white
+  { bg: "rgba(165,125,0,0.37)",  bgLight: "rgba(255,212,65,0.52)",  text: "#ffe9a0" }, // amber
+  { bg: "rgba(255,255,255,0.10)", bgLight: "rgba(250,242,215,0.26)", text: "#f0e0a8" }, // glass
 ];
 
 function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
@@ -115,8 +115,8 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       ctx.fillStyle = grad;
       ctx.fill();
 
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(255,220,100,0.30)";
+      ctx.lineWidth = 1.2;
       ctx.stroke();
       ctx.restore();
 
@@ -141,16 +141,16 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       const amount = parseFloat(slot.amount);
       const text = amount < 1 ? amount.toFixed(2) : amount % 1 === 0 ? String(amount) : amount.toFixed(1);
 
-      const isWhiteSeg = colors.text !== "#ffffff";
-      ctx.shadowColor = isWhiteSeg ? "rgba(180,130,0,0.6)" : "rgba(255,215,0,0.7)";
-      ctx.shadowBlur = 4;
+      ctx.shadowColor = "rgba(255,200,50,0.55)";
+      ctx.shadowBlur = 6;
       ctx.fillStyle = colors.text;
       ctx.font = `900 ${outerR * 0.115}px Cairo, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(text, 0, 0);
 
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = isWhiteSeg ? "rgba(140,100,0,0.85)" : "rgba(255,230,100,0.85)";
+      ctx.shadowBlur = 3;
+      ctx.shadowColor = "rgba(200,160,0,0.4)";
+      ctx.fillStyle = "rgba(255,230,140,0.80)";
       ctx.font = `700 ${outerR * 0.066}px Cairo, sans-serif`;
       ctx.fillText("TON", 0, outerR * 0.115 + 2);
       ctx.shadowBlur = 0;
