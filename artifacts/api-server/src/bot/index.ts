@@ -202,13 +202,7 @@ export function initBot() {
         entities: welcomeEntities as any,
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🎡 العب الآن", web_app: { url: MINI_APP_URL } }],
-            [
-              {
-                text: "👥 شارك مع أصدقائك",
-                url: `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}?start=ref_${userId}&text=🎰 العب عجلة الحظ واربح TON مجاناً!`,
-              },
-            ],
+            [{ text: "🎡 Open now", web_app: { url: MINI_APP_URL } }],
           ],
         },
       });
