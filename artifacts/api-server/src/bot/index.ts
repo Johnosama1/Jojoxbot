@@ -252,7 +252,6 @@ export function initBot() {
     await handleAdminText(bot, msg);
   });
 
-  logger.info("Telegram bot started");
 }
 
 // ────────────────────────────────────────────────────────────────────

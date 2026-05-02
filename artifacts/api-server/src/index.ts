@@ -1,9 +1,11 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { initBot, setupCallbackHandlers } from "./bot";
+import { initBot } from "./bot";
 import { db } from "@workspace/db";
 import { pool } from "@workspace/db";
 import { sql } from "drizzle-orm";
+
+const t0 = Date.now();
 
 const rawPort = process.env["PORT"];
 if (!rawPort) throw new Error("PORT environment variable is required but was not provided.");
@@ -11,50 +13,46 @@ if (!rawPort) throw new Error("PORT environment variable is required but was not
 const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT value: "${rawPort}"`);
 
-// ── Start HTTP server immediately — don't block on bot or DB ──────────
 const server = app.listen(port, (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-  logger.info({ port }, "Server listening");
 
-  // ── Non-blocking post-startup tasks ──────────────────────────────
-  // Pre-warm exactly 1 DB connection so first request is instant
+  const httpMs = Date.now() - t0;
+  logger.info({ port, startupMs: httpMs }, "Server listening");
+
+  // DB warm-up and bot start run in parallel — neither blocks the server
+  const tBot = Date.now();
   db.execute(sql`SELECT 1`).catch(() => {});
 
-  // Start Telegram bot polling after HTTP is ready
   initBot();
-  setupCallbackHandlers();
+  logger.info({ botMs: Date.now() - tBot }, "Telegram bot started");
 });
 
-// ── Keep-alive: re-use connections, avoid TIME_WAIT accumulation ──────
-server.keepAliveTimeout = 65_000;   // Slightly longer than ALB 60s
-server.headersTimeout  = 66_000;
+// Keep-alive: longer timeout prevents premature connection drops
+server.keepAliveTimeout = 65_000;
+server.headersTimeout   = 66_000;
 
-// ── Keep Replit awake — self-ping every 14 minutes in production ──────
+// Self-ping every 14 min in production to prevent Replit sleep
 if (process.env.NODE_ENV === "production") {
-  const SELF_URL = `http://localhost:${port}/api/health`;
-  const PING_INTERVAL = 14 * 60_000;
-
   setInterval(async () => {
     try {
-      const res = await fetch(SELF_URL, { signal: AbortSignal.timeout(5_000) });
-      if (!res.ok) logger.warn({ status: res.status }, "Keep-alive ping non-OK");
-    } catch {
-      // Ignore transient errors — don't crash the process
-    }
-  }, PING_INTERVAL);
+      const res = await fetch(`http://localhost:${port}/api/health`, {
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (!res.ok) logger.warn({ status: res.status }, "Keep-alive ping failed");
+    } catch { /* ignore */ }
+  }, 14 * 60_000);
 }
 
-// ── Graceful shutdown ─────────────────────────────────────────────────
-async function shutdown(signal: string) {
-  logger.info({ signal }, "Shutting down gracefully");
+// Graceful shutdown
+function shutdown(signal: string) {
+  logger.info({ signal }, "Shutting down");
   server.close(async () => {
     await pool.end().catch(() => {});
     process.exit(0);
   });
-  // Force kill after 10 s
   setTimeout(() => process.exit(1), 10_000).unref();
 }
 
