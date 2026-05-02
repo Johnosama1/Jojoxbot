@@ -5,10 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <title>Jojox - عجلة الحظ</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="image" href="/bg.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background-color: #020e06;
+      }
+      body {
+        background-image: url('/bg.jpg');
+        background-size: cover;
+        background-position: center top;
+        background-repeat: no-repeat;
+      }
+      #root {
+        height: 100%;
+        position: relative;
+        z-index: 1;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
