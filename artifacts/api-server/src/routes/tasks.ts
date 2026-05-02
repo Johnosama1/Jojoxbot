@@ -44,10 +44,14 @@ router.post("/:taskId/complete", async (req, res) => {
   invalidateTasksCache();
 
   const taskId = parseInt(req.params.taskId);
-  const { userId } = req.body;
+  if (isNaN(taskId) || taskId <= 0) {
+    res.status(400).json({ error: "Invalid taskId" });
+    return;
+  }
 
-  if (!userId) {
-    res.status(400).json({ error: "Missing userId" });
+  const userId = parseInt(String(req.body.userId));
+  if (isNaN(userId) || userId <= 0) {
+    res.status(400).json({ error: "Missing or invalid userId" });
     return;
   }
 

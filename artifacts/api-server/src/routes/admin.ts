@@ -155,8 +155,10 @@ router.delete("/wheel/:id", async (req, res) => {
 });
 
 // ── Users ──────────────────────────────────────────────────────────────
-router.get("/users", async (_req, res) => {
-  const users = await db.select().from(usersTable).orderBy(usersTable.createdAt);
+router.get("/users", async (req, res) => {
+  const limit = Math.min(parseInt(String(req.query.limit)) || 100, 500);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+  const users = await db.select().from(usersTable).orderBy(usersTable.createdAt).limit(limit).offset(offset);
   res.json(users);
 });
 

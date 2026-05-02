@@ -44,6 +44,7 @@ router.post("/init", telegramAuth, async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   res.setHeader("Cache-Control", "private, max-age=5");

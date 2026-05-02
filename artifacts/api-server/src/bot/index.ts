@@ -4,7 +4,6 @@ import {
   usersTable,
   botSettingsTable,
   withdrawalsTable,
-  adminsTable,
 } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -20,6 +19,26 @@ import {
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 
 let bot: TelegramBot;
+
+// ── Lightweight command spam guard (no external deps) ─────────────────
+const cmdTimestamps = new Map<number, number>();
+const CMD_COOLDOWN_MS = 3_000; // max 1 command per 3 seconds per user
+
+function isCommandSpam(userId: number): boolean {
+  const now = Date.now();
+  const last = cmdTimestamps.get(userId);
+  if (last && now - last < CMD_COOLDOWN_MS) return true;
+  cmdTimestamps.set(userId, now);
+  return false;
+}
+
+// Clean up every 10 minutes to avoid memory leak
+setInterval(() => {
+  const cutoff = Date.now() - CMD_COOLDOWN_MS * 10;
+  for (const [id, ts] of cmdTimestamps) {
+    if (ts < cutoff) cmdTimestamps.delete(id);
+  }
+}, 10 * 60_000).unref();
 
 export function getBot(): TelegramBot {
   return bot;
@@ -42,6 +61,7 @@ export function initBot() {
     try {
       const chatId = msg.chat.id;
       const userId = msg.from!.id;
+      if (isCommandSpam(userId)) return; // silent drop — don't reply
       const username = msg.from?.username;
       const firstName = msg.from?.first_name || "";
       const lastName = msg.from?.last_name || "";
@@ -161,6 +181,7 @@ export function initBot() {
   // ───────────────────────────── /admin ─────────────────────────────
   bot.onText(/^\/admin$/, async (msg) => {
     const userId = msg.from!.id;
+    if (isCommandSpam(userId)) return;
     const username = msg.from?.username;
     const ok = await isOwner(userId, username);
     if (!ok) return;

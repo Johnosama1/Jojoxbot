@@ -8,6 +8,7 @@ import {
   withdrawalsTable,
 } from "@workspace/db/schema";
 import { eq, desc, sql, count, ilike } from "drizzle-orm";
+import { logger } from "../lib/logger";
 
 export const OWNER_USERNAME = "J_O_H_N8";
 
@@ -522,7 +523,7 @@ export async function handleAdminCallback(
       await showSettingsMenu(bot, chatId, msgId);
     }
   } catch (err) {
-    console.error("Admin callback error:", err);
+    logger.error({ err }, "Admin callback error");
     try { await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { }); } catch { /* ignore */ }
   }
 
@@ -750,7 +751,7 @@ export async function handleAdminText(
       return true;
     }
   } catch (err) {
-    console.error("Admin text handler error:", err);
+    logger.error({ err }, "Admin text handler error");
     await bot.sendMessage(chatId, "❌ حدث خطأ، حاول مرة أخرى.", { });
   }
 
