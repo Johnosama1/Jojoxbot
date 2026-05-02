@@ -202,7 +202,7 @@ export function initBot() {
         entities: welcomeEntities as any,
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🎡 Open now", web_app: { url: MINI_APP_URL } }],
+            [{ text: "🎁 Open now", web_app: { url: MINI_APP_URL } }],
           ],
         },
       });
