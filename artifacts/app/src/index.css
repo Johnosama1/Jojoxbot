@@ -55,12 +55,24 @@
     @apply border-border;
     box-sizing: border-box;
   }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+  }
   body {
     @apply font-sans antialiased text-foreground;
     background: #080014;
     direction: rtl;
-    overflow-x: hidden;
-    min-height: 100vh;
+  }
+  #root {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -305,9 +317,13 @@
 
 /* Page content padding for tab bar */
 .page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding-bottom: 90px;
   position: relative;
   z-index: 1;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Win result animation */

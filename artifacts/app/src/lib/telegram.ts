@@ -62,7 +62,20 @@ export function initTelegramApp() {
   if (tg) {
     tg.ready();
     tg.expand();
+    // Disable vertical swipe-to-close gesture
+    if (typeof (tg as unknown as Record<string, unknown>).disableVerticalSwipes === "function") {
+      (tg as unknown as Record<string, () => void>).disableVerticalSwipes();
+    }
   }
+  // Lock the page: no body scroll at all
+  document.documentElement.style.height = "100%";
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.height = "100%";
+  document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.width = "100%";
+  document.body.style.top = "0";
+  document.body.style.left = "0";
 }
 
 // For testing in browser without Telegram

@@ -31,9 +31,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <UserProvider>
         <AnimatedBackground />
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </div>
       </UserProvider>
     </QueryClientProvider>
   );
