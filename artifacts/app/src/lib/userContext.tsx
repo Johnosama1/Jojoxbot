@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { api, User, getWheelSlotsOnce } from "./api";
+import { api, User, getWheelSlotsOnce, getTasksOnce, getCompletedTasksOnce, getWithdrawalsOnce } from "./api";
 import { getTelegramUser, initTelegramApp, getMockUser } from "./telegram";
 
 interface UserContextType {
@@ -38,17 +38,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       initTelegramApp();
       const tgUser = getTelegramUser() ?? getMockUser();
 
-      // Fetch user + wheel slots in parallel
-      const [u] = await Promise.all([
-        api.initUser({
-          id: tgUser.id,
-          username: tgUser.username ?? undefined,
-          first_name: tgUser.first_name ?? undefined,
-          last_name: tgUser.last_name ?? undefined,
-          photo_url: tgUser.photo_url ?? undefined,
-        }),
-        getWheelSlotsOnce().catch(() => {}),
+      // Start public caches immediately (no userId needed)
+      getWheelSlotsOnce().catch(() => {});
+      getTasksOnce().catch(() => {});
+
+      const u = await api.initUser({
+        id: tgUser.id,
+        username: tgUser.username ?? undefined,
+        first_name: tgUser.first_name ?? undefined,
+        last_name: tgUser.last_name ?? undefined,
+        photo_url: tgUser.photo_url ?? undefined,
+      });
+
+      // Now warm user-specific caches in parallel
+      await Promise.all([
+        getCompletedTasksOnce(u.id).catch(() => {}),
+        getWithdrawalsOnce(u.id).catch(() => {}),
       ]);
+
       setUser(u);
     } catch (e: unknown) {
       if (e instanceof Error && e.message === "محظور") {

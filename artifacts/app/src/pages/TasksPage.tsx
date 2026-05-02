@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
-import { api, Task } from "../lib/api";
+import { api, Task, getTasksOnce, getCompletedTasksOnce, invalidateUserCaches } from "../lib/api";
 import { CheckCircle, ExternalLink, Clock, Zap } from "lucide-react";
 
 export default function TasksPage() {
@@ -14,7 +14,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([api.getTasks(), api.getUserCompletedTasks(user.id)]).then(([t, c]) => {
+    Promise.all([getTasksOnce(), getCompletedTasksOnce(user.id)]).then(([t, c]) => {
       setTasks(t);
       setCompleted(c);
       setLoading(false);
@@ -31,6 +31,7 @@ export default function TasksPage() {
     setCompleting(task.id);
     try {
       await api.completeTask(task.id, user.id);
+      invalidateUserCaches(user.id);
       setCompleted((prev) => [...prev, task.id]);
       setMessage({ taskId: task.id, text: "✅ تم إكمال المهمة!", type: "success" });
       await refresh();

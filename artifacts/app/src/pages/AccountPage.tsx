@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
-import { api, Withdrawal } from "../lib/api";
+import { api, Withdrawal, getWithdrawalsOnce, invalidateUserCaches } from "../lib/api";
 import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
@@ -33,7 +33,7 @@ export default function AccountPage() {
   useEffect(() => {
     if (!user) return;
     setLoadingHistory(true);
-    api.getUserWithdrawals(user.id)
+    getWithdrawalsOnce(user.id)
       .then(setWithdrawals)
       .catch(() => {})
       .finally(() => setLoadingHistory(false));
@@ -63,6 +63,7 @@ export default function AccountPage() {
     setSubmitting(true);
     try {
       await api.requestWithdrawal({ userId: user.id, amount, walletAddress: walletAddress.trim() });
+      invalidateUserCaches(user.id);
       setSuccess(true);
       setAmount("");
       setWalletAddress("");

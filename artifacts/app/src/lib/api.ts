@@ -1,10 +1,36 @@
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-// Module-level cache — fetched once, shared across all component mounts
+// Module-level caches — fetched once, shared across all component mounts
 let _slotsCache: Promise<WheelSlot[]> | null = null;
 export function getWheelSlotsOnce(): Promise<WheelSlot[]> {
   if (!_slotsCache) _slotsCache = apiCall<WheelSlot[]>("/wheel");
   return _slotsCache;
+}
+
+let _tasksCache: Promise<Task[]> | null = null;
+export function getTasksOnce(): Promise<Task[]> {
+  if (!_tasksCache) _tasksCache = apiCall<Task[]>("/tasks");
+  return _tasksCache;
+}
+
+const _completedCache = new Map<number, Promise<number[]>>();
+export function getCompletedTasksOnce(userId: number): Promise<number[]> {
+  if (!_completedCache.has(userId))
+    _completedCache.set(userId, apiCall<number[]>(`/tasks/${userId}/completed`));
+  return _completedCache.get(userId)!;
+}
+
+const _withdrawalsCache = new Map<number, Promise<Withdrawal[]>>();
+export function getWithdrawalsOnce(userId: number): Promise<Withdrawal[]> {
+  if (!_withdrawalsCache.has(userId))
+    _withdrawalsCache.set(userId, apiCall<Withdrawal[]>(`/withdrawals/${userId}`));
+  return _withdrawalsCache.get(userId)!;
+}
+
+export function invalidateUserCaches(userId: number) {
+  _completedCache.delete(userId);
+  _withdrawalsCache.delete(userId);
+  _tasksCache = null;
 }
 
 export async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
