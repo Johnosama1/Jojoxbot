@@ -391,13 +391,13 @@ export async function handleAdminCallback(
       const [t] = await db.select().from(tasksTable).where(eq(tasksTable.id, parseInt(p1))).limit(1);
       if (t) {
         const text =
-          `📋 *مهمة #${t.id}*\n\n` +
-          `${t.icon || "⭐"} *${t.title}*\n` +
+          `📋 مهمة #${t.id}\n\n` +
+          `${t.icon || "⭐"} ${t.title}\n` +
           `الوصف: ${t.description || "—"}\n` +
           `الرابط: ${t.url || "—"}\n` +
           `الحالة: ${t.isActive ? "✅ نشطة" : "❌ معطلة"}`;
         await bot.editMessageText(text, {
-          chat_id: chatId, message_id: msgId, parse_mode: "Markdown",
+          chat_id: chatId, message_id: msgId,
           reply_markup: {
             inline_keyboard: [
               [
