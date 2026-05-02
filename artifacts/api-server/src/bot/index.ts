@@ -58,6 +58,13 @@ export function initBot() {
         .from(usersTable)
         .where(eq(usersTable.id, userId))
         .limit(1);
+
+      // Block banned users
+      if (existing.length > 0 && existing[0].isVisible === false) {
+        await bot.sendMessage(chatId, "🚫 حسابك محظور من استخدام هذا البوت.");
+        return;
+      }
+
       const isNew = existing.length === 0;
 
       if (isNew) {

@@ -187,8 +187,9 @@ function showUserCard(
 ) {
   const safeName = `${u.firstName || "—"} ${u.lastName || ""}`.trim();
   const safeUsername = u.username ? `@${u.username}` : "—";
+  const banned = u.isVisible === false;
   const info =
-    `👤 المستخدم رقم: ${u.id}\n\n` +
+    `${banned ? "🚫 محظور" : "✅ نشط"} | المستخدم رقم: ${u.id}\n\n` +
     `الاسم: ${safeName}\n` +
     `اليوزر: ${safeUsername}\n` +
     `💰 الرصيد: ${parseFloat(u.balance).toFixed(4)} TON\n` +
@@ -206,6 +207,11 @@ function showUserCard(
         [
           { text: "✏️ تعيين رصيد محدد", callback_data: `adm:u:bal:${u.id}` },
           { text: "🎰 تعديل اللفات", callback_data: `adm:u:spins:${u.id}` },
+        ],
+        [
+          banned
+            ? { text: "✅ رفع الحظر", callback_data: `adm:u:unban:${u.id}` }
+            : { text: "🚫 حظر المستخدم", callback_data: `adm:u:ban:${u.id}` },
         ],
         [{ text: "◀️ رجوع للمستخدمين", callback_data: "adm:users" }],
       ],
@@ -455,6 +461,28 @@ export async function handleAdminCallback(
       await bot.sendMessage(chatId,
         `🎰 أدخل عدد اللفات لـ \`${p1}\`\n_(مثال: 10 أو +5 أو -2)_`,
         { parse_mode: "Markdown" });
+    }
+
+    else if (sec === "u" && act === "ban" && p1) {
+      const targetId = parseInt(p1);
+      await db.update(usersTable).set({ isVisible: false }).where(eq(usersTable.id, targetId));
+      try {
+        await bot.sendMessage(targetId,
+          "🚫 تم حظر حسابك من استخدام البوت. للاستفسار تواصل مع الدعم.");
+      } catch { /* user may have blocked bot */ }
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(chatId, `🚫 تم حظر المستخدم ${u?.firstName || targetId} (${targetId}) بنجاح.`);
+    }
+
+    else if (sec === "u" && act === "unban" && p1) {
+      const targetId = parseInt(p1);
+      await db.update(usersTable).set({ isVisible: true }).where(eq(usersTable.id, targetId));
+      try {
+        await bot.sendMessage(targetId,
+          "✅ تم رفع الحظر عن حسابك. يمكنك الآن استخدام البوت مجدداً!");
+      } catch { /* user may have blocked bot */ }
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(chatId, `✅ تم رفع الحظر عن المستخدم ${u?.firstName || targetId} (${targetId}).`);
     }
 
     // ── Withdrawals ──

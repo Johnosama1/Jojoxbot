@@ -29,6 +29,10 @@ router.post("/init", async (req, res) => {
     }).returning();
     res.json(user);
   } else {
+    if (existing[0].isVisible === false) {
+      res.status(403).json({ error: "محظور", banned: true });
+      return;
+    }
     const [user] = await db.update(usersTable)
       .set({
         username: username || existing[0].username,
@@ -58,6 +62,11 @@ router.post("/:id/spin", async (req, res) => {
 
   if (!user) {
     res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (user.isVisible === false) {
+    res.status(403).json({ error: "محظور", banned: true });
     return;
   }
 

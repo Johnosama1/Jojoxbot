@@ -7,6 +7,7 @@ interface UserContextType {
   loading: boolean;
   refresh: () => Promise<void>;
   isAdmin: boolean;
+  banned: boolean;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -14,6 +15,7 @@ const UserContext = createContext<UserContextType>({
   loading: true,
   refresh: async () => {},
   isAdmin: false,
+  banned: false,
 });
 
 const OWNER_USERNAME = "J_O_H_N8";
@@ -21,6 +23,7 @@ const OWNER_USERNAME = "J_O_H_N8";
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [banned, setBanned] = useState(false);
 
   const init = async () => {
     try {
@@ -35,8 +38,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         photo_url: tgUser.photo_url ?? undefined,
       });
       setUser(u);
-    } catch (e) {
-      console.error("Failed to init user", e);
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message === "محظور") {
+        setBanned(true);
+      } else {
+        console.error("Failed to init user", e);
+      }
     } finally {
       setLoading(false);
     }
@@ -59,7 +66,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = !!(user && (user.username === OWNER_USERNAME));
 
   return (
-    <UserContext.Provider value={{ user, loading, refresh, isAdmin }}>
+    <UserContext.Provider value={{ user, loading, refresh, isAdmin, banned }}>
       {children}
     </UserContext.Provider>
   );
