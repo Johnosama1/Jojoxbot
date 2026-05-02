@@ -9,18 +9,18 @@ interface WheelCanvasProps {
 }
 
 const SEGMENT_COLORS = [
-  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
-  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
-  { bg: "#0a6e1e", bgLight: "#19c93d", text: "#ffffff" },
-  { bg: "#0a3db5", bgLight: "#2563eb", text: "#ffffff" },
-  { bg: "#7c0fad", bgLight: "#b933e8", text: "#ffffff" },
-  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
-  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
-  { bg: "#0a6e1e", bgLight: "#19c93d", text: "#ffffff" },
-  { bg: "#0a3db5", bgLight: "#2563eb", text: "#ffffff" },
-  { bg: "#7c0fad", bgLight: "#b933e8", text: "#ffffff" },
-  { bg: "#c0170d", bgLight: "#ff3a2b", text: "#ffffff" },
-  { bg: "#b36b00", bgLight: "#ffaa00", text: "#ffffff" },
+  { bg: "#14532d", bgLight: "#22c55e", text: "#ffffff" }, // forest green
+  { bg: "#78350f", bgLight: "#fbbf24", text: "#ffffff" }, // amber gold
+  { bg: "#0c4a6e", bgLight: "#38bdf8", text: "#ffffff" }, // sky blue
+  { bg: "#1a3a12", bgLight: "#84cc16", text: "#ffffff" }, // leaf green
+  { bg: "#92400e", bgLight: "#f59e0b", text: "#ffffff" }, // warm amber
+  { bg: "#164e63", bgLight: "#22d3ee", text: "#ffffff" }, // teal
+  { bg: "#14532d", bgLight: "#4ade80", text: "#ffffff" }, // bright forest
+  { bg: "#713f12", bgLight: "#fb923c", text: "#ffffff" }, // earth orange
+  { bg: "#1e3a5f", bgLight: "#60a5fa", text: "#ffffff" }, // deep sky
+  { bg: "#365314", bgLight: "#a3e635", text: "#ffffff" }, // lime green
+  { bg: "#78350f", bgLight: "#fcd34d", text: "#ffffff" }, // sunlight gold
+  { bg: "#0f3460", bgLight: "#3b82f6", text: "#ffffff" }, // twilight blue
 ];
 
 function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
@@ -85,8 +85,8 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
     // Outer ambient glow
     const glowPulse = 0.3 + 0.15 * Math.sin(glowFrame * 0.06);
     const glowGrad = ctx.createRadialGradient(cx, cy, outerR - 5, cx, cy, outerR + 22);
-    glowGrad.addColorStop(0, `rgba(147,51,234,${glowPulse})`);
-    glowGrad.addColorStop(0.5, `rgba(255,215,0,${glowPulse * 0.3})`);
+    glowGrad.addColorStop(0, `rgba(34,197,94,${glowPulse})`);
+    glowGrad.addColorStop(0.5, `rgba(251,191,36,${glowPulse * 0.35})`);
     glowGrad.addColorStop(1, "rgba(0,0,0,0)");
     ctx.beginPath();
     ctx.arc(cx, cy, outerR + 22, 0, 2 * Math.PI);
@@ -156,17 +156,17 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       ctx.restore();
     });
 
-    // Outer gold ring
+    // Outer ring — green forest glow
     ctx.beginPath();
     ctx.arc(cx, cy, outerR + 1, 0, 2 * Math.PI);
-    ctx.strokeStyle = "rgba(255,215,0,0.75)";
+    ctx.strokeStyle = "rgba(34,197,94,0.80)";
     ctx.lineWidth = 3.5;
-    ctx.shadowColor = "rgba(255,215,0,0.6)";
+    ctx.shadowColor = "rgba(34,197,94,0.55)";
     ctx.shadowBlur = 10 + 5 * Math.sin(glowFrame * 0.07);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Decorative dot ring
+    // Decorative dot ring — alternating green & amber
     const dotCount = slots.length * 2;
     for (let i = 0; i < dotCount; i++) {
       const angle = (i / dotCount) * Math.PI * 2 + rotation;
@@ -174,19 +174,19 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       const dy = cy + Math.sin(angle) * (outerR + 4);
       ctx.beginPath();
       ctx.arc(dx, dy, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = i % 2 === 0 ? "#ffd700" : "#a855f7";
-      ctx.shadowColor = i % 2 === 0 ? "#ffd700" : "#a855f7";
+      ctx.fillStyle = i % 2 === 0 ? "#fbbf24" : "#22c55e";
+      ctx.shadowColor = i % 2 === 0 ? "#fbbf24" : "#22c55e";
       ctx.shadowBlur = 5;
       ctx.fill();
       ctx.shadowBlur = 0;
     }
 
-    // Hub center
+    // Hub center — deep forest
     const hubR = outerR * 0.22;
     const hubGrad = ctx.createRadialGradient(cx - hubR * 0.15, cy - hubR * 0.15, 0, cx, cy, hubR * 1.5);
-    hubGrad.addColorStop(0, "#1e0060");
-    hubGrad.addColorStop(0.5, "#0e0035");
-    hubGrad.addColorStop(1, "#050015");
+    hubGrad.addColorStop(0, "#0a2e18");
+    hubGrad.addColorStop(0.5, "#052010");
+    hubGrad.addColorStop(1, "#020e06");
     ctx.beginPath();
     ctx.arc(cx, cy, hubR * 1.5, 0, 2 * Math.PI);
     ctx.fillStyle = hubGrad;
@@ -194,26 +194,26 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
 
     ctx.beginPath();
     ctx.arc(cx, cy, hubR * 1.5, 0, 2 * Math.PI);
-    ctx.strokeStyle = `rgba(255,215,0,${0.5 + 0.2 * Math.sin(glowFrame * 0.08)})`;
+    ctx.strokeStyle = `rgba(34,197,94,${0.5 + 0.2 * Math.sin(glowFrame * 0.08)})`;
     ctx.lineWidth = 2;
-    ctx.shadowColor = "rgba(255,215,0,0.5)";
+    ctx.shadowColor = "rgba(34,197,94,0.6)";
     ctx.shadowBlur = 8;
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // X logo
+    // X logo — amber on dark green
     ctx.save();
     ctx.font = `900 ${hubR * 1.6}px Arial`;
-    ctx.fillStyle = "rgba(255,215,0,0.92)";
+    ctx.fillStyle = "rgba(251,191,36,0.95)";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.shadowColor = "rgba(255,215,0,0.7)";
+    ctx.shadowColor = "rgba(251,191,36,0.8)";
     ctx.shadowBlur = 14;
     ctx.fillText("✕", cx, cy);
     ctx.shadowBlur = 0;
     ctx.restore();
 
-    // Pointer arrow
+    // Pointer arrow — amber
     ctx.save();
     ctx.translate(cx, cy - outerR - 2);
     ctx.beginPath();
@@ -222,11 +222,11 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
     ctx.lineTo(12, -6);
     ctx.closePath();
     const pGrad = ctx.createLinearGradient(-12, -6, 12, 17);
-    pGrad.addColorStop(0, "#ffe566");
-    pGrad.addColorStop(0.5, "#ffd700");
-    pGrad.addColorStop(1, "#cc7700");
+    pGrad.addColorStop(0, "#fcd34d");
+    pGrad.addColorStop(0.5, "#fbbf24");
+    pGrad.addColorStop(1, "#b45309");
     ctx.fillStyle = pGrad;
-    ctx.shadowColor = "rgba(255,215,0,0.9)";
+    ctx.shadowColor = "rgba(251,191,36,0.9)";
     ctx.shadowBlur = 14;
     ctx.fill();
     ctx.shadowBlur = 0;
@@ -298,8 +298,8 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
           position: "absolute",
           inset: -6,
           borderRadius: "50%",
-          background: "conic-gradient(from 0deg, #ffd700 0%, #9333ea 20%, #c084fc 40%, #ffd700 60%, #ff8c00 80%, #9333ea 100%)",
-          opacity: spinning ? 0.65 : 0.35,
+          background: "conic-gradient(from 0deg, #fbbf24 0%, #22c55e 20%, #38bdf8 40%, #fbbf24 55%, #84cc16 70%, #f59e0b 85%, #22c55e 100%)",
+          opacity: spinning ? 0.70 : 0.40,
           filter: "blur(2px)",
           animation: "rotate-slow 3s linear infinite",
           transition: "opacity 0.5s",
@@ -310,7 +310,7 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
           position: "absolute",
           inset: -2,
           borderRadius: "50%",
-          background: "#06001a",
+          background: "#020e06",
         }}
       />
       <canvas
