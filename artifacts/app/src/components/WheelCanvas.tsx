@@ -9,18 +9,18 @@ interface WheelCanvasProps {
 }
 
 const SEGMENT_COLORS = [
-  { bg: "#14532d", bgLight: "#22c55e", text: "#ffffff" }, // forest green
-  { bg: "#78350f", bgLight: "#fbbf24", text: "#ffffff" }, // amber gold
-  { bg: "#0c4a6e", bgLight: "#38bdf8", text: "#ffffff" }, // sky blue
-  { bg: "#1a3a12", bgLight: "#84cc16", text: "#ffffff" }, // leaf green
-  { bg: "#92400e", bgLight: "#f59e0b", text: "#ffffff" }, // warm amber
-  { bg: "#164e63", bgLight: "#22d3ee", text: "#ffffff" }, // teal
-  { bg: "#14532d", bgLight: "#4ade80", text: "#ffffff" }, // bright forest
-  { bg: "#713f12", bgLight: "#fb923c", text: "#ffffff" }, // earth orange
-  { bg: "#1e3a5f", bgLight: "#60a5fa", text: "#ffffff" }, // deep sky
-  { bg: "#365314", bgLight: "#a3e635", text: "#ffffff" }, // lime green
-  { bg: "#78350f", bgLight: "#fcd34d", text: "#ffffff" }, // sunlight gold
-  { bg: "#0f3460", bgLight: "#3b82f6", text: "#ffffff" }, // twilight blue
+  { bg: "#7c5c00", bgLight: "#ffd700", text: "#ffffff" }, // deep gold
+  { bg: "#e8e8e8", bgLight: "#ffffff", text: "#7c5c00" }, // pure white → gold text
+  { bg: "#9a7200", bgLight: "#ffe44d", text: "#ffffff" }, // warm gold
+  { bg: "#d4d4d4", bgLight: "#f9f9f9", text: "#8a6500" }, // soft white → gold text
+  { bg: "#6b4e00", bgLight: "#ffc000", text: "#ffffff" }, // dark amber
+  { bg: "#ebebeb", bgLight: "#ffffff", text: "#6b4e00" }, // white → amber text
+  { bg: "#8a6500", bgLight: "#ffd700", text: "#ffffff" }, // gold
+  { bg: "#e0e0e0", bgLight: "#f8f8f8", text: "#7c5c00" }, // white
+  { bg: "#b38900", bgLight: "#ffe566", text: "#ffffff" }, // light gold
+  { bg: "#d8d8d8", bgLight: "#ffffff", text: "#9a7200" }, // white → deep gold text
+  { bg: "#7c5c00", bgLight: "#ffc62b", text: "#ffffff" }, // amber
+  { bg: "#e6e6e6", bgLight: "#ffffff", text: "#7c5c00" }, // white
 ];
 
 function drawCoin(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
@@ -141,15 +141,16 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       const amount = parseFloat(slot.amount);
       const text = amount < 1 ? amount.toFixed(2) : amount % 1 === 0 ? String(amount) : amount.toFixed(1);
 
-      ctx.shadowColor = colors.text === "#ffd700" ? "rgba(255,215,0,0.9)" : "rgba(192,132,252,0.9)";
-      ctx.shadowBlur = 5;
+      const isWhiteSeg = colors.text !== "#ffffff";
+      ctx.shadowColor = isWhiteSeg ? "rgba(180,130,0,0.6)" : "rgba(255,215,0,0.7)";
+      ctx.shadowBlur = 4;
       ctx.fillStyle = colors.text;
       ctx.font = `900 ${outerR * 0.115}px Cairo, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(text, 0, 0);
 
-      ctx.shadowBlur = 2;
-      ctx.fillStyle = "rgba(210,190,255,0.8)";
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = isWhiteSeg ? "rgba(140,100,0,0.85)" : "rgba(255,230,100,0.85)";
       ctx.font = `700 ${outerR * 0.066}px Cairo, sans-serif`;
       ctx.fillText("TON", 0, outerR * 0.115 + 2);
       ctx.shadowBlur = 0;

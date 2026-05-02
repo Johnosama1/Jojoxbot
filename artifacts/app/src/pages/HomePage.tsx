@@ -135,7 +135,7 @@ export default function HomePage() {
 
       {/* ── Wheel ── */}
       <div className="flex flex-col items-center w-full px-4 mt-5 gap-4">
-        <div className="wheel-ring float-animation">
+        <div className="wheel-ring">
           <WheelCanvas
             slots={slots}
             spinning={spinning}
