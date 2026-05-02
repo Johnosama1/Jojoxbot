@@ -98,7 +98,7 @@ export function initBot() {
             firstName,
             lastName,
             referredBy: referredBy ?? null,
-            spins: 3,
+            spins: 1,
           })
           .onConflictDoNothing()
           .returning({ id: usersTable.id });
