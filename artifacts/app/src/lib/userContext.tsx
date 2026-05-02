@@ -25,21 +25,30 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [banned, setBanned] = useState(false);
 
+  const hideSplash = () => {
+    const splash = document.getElementById("splash");
+    if (splash) {
+      splash.classList.add("hidden");
+      setTimeout(() => splash.remove(), 600);
+    }
+  };
+
   const init = async () => {
     try {
       initTelegramApp();
       const tgUser = getTelegramUser() ?? getMockUser();
 
-      // Pre-fetch wheel slots in parallel with user init (warms the cache)
-      getWheelSlotsOnce().catch(() => {});
-
-      const u = await api.initUser({
-        id: tgUser.id,
-        username: tgUser.username ?? undefined,
-        first_name: tgUser.first_name ?? undefined,
-        last_name: tgUser.last_name ?? undefined,
-        photo_url: tgUser.photo_url ?? undefined,
-      });
+      // Fetch user + wheel slots in parallel
+      const [u] = await Promise.all([
+        api.initUser({
+          id: tgUser.id,
+          username: tgUser.username ?? undefined,
+          first_name: tgUser.first_name ?? undefined,
+          last_name: tgUser.last_name ?? undefined,
+          photo_url: tgUser.photo_url ?? undefined,
+        }),
+        getWheelSlotsOnce().catch(() => {}),
+      ]);
       setUser(u);
     } catch (e: unknown) {
       if (e instanceof Error && e.message === "محظور") {
@@ -49,6 +58,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       setLoading(false);
+      hideSplash();
     }
   };
 
