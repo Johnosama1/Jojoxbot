@@ -1,6 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import compression from "compression";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -10,9 +12,62 @@ import { sql } from "drizzle-orm";
 
 const app: Express = express();
 
-// Compress all responses (gzip/brotli) — huge win for JSON payloads
+// ── Security headers (helmet) ────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // Telegram Mini App needs flexibility
+  crossOriginEmbedderPolicy: false,
+}));
+app.disable("x-powered-by"); // Don't reveal server technology
+
+// ── Compression ──────────────────────────────────────────────────────
 app.use(compression());
 
+// ── CORS — only Telegram-related origins ────────────────────────────
+const ALLOWED_ORIGINS = [
+  /^https:\/\/.*\.telegram\.org$/,
+  /^https:\/\/.*\.tgwebapp\.net$/,
+  /^https:\/\/.*\.replit\.dev$/,
+  /^https:\/\/.*\.replit\.app$/,
+  /^http:\/\/localhost(:\d+)?$/,
+];
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, curl, Postman in dev)
+    if (!origin) return cb(null, true);
+    const ok = ALLOWED_ORIGINS.some((r) => r.test(origin));
+    cb(null, ok);
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "x-telegram-init-data", "x-user-id"],
+  credentials: false,
+}));
+
+// ── Global rate limiter — protect all endpoints ──────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 60_000,       // 1 minute window
+  max: 120,               // max 120 requests per IP per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "طلبات كثيرة، حاول لاحقاً" },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+app.use(globalLimiter);
+
+// ── Strict limiter for auth-sensitive endpoints ──────────────────────
+export const authLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "محاولات كثيرة، انتظر دقيقة" },
+  skip: () => process.env.NODE_ENV !== "production",
+});
+
+// ── Request size limit ────────────────────────────────────────────────
+app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+
+// ── Logging ───────────────────────────────────────────────────────────
 app.use(
   pinoHttp({
     logger,
@@ -27,16 +82,24 @@ app.use(
   }),
 );
 
-app.use(cors({ origin: "*" }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
+// ── Routes ────────────────────────────────────────────────────────────
 app.use("/api", router);
+
+// ── 404 catch-all ─────────────────────────────────────────────────────
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// ── Global error handler — never leak stack traces ────────────────────
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err }, "Unhandled error");
+  res.status(500).json({ error: "Internal server error" });
+});
 
 initBot();
 setupCallbackHandlers();
 
-// ── Pre-warm DB connection so first user request isn't slow ──────────
+// Pre-warm DB connection
 db.execute(sql`SELECT 1`).catch(() => {});
 
 export default app;
