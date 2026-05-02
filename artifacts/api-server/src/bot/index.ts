@@ -61,7 +61,9 @@ export function initBot() {
 
       // Block banned users
       if (existing.length > 0 && existing[0].isVisible === false) {
-        await bot.sendMessage(chatId, "🚫 حسابك محظور من استخدام هذا البوت.");
+        await bot.sendMessage(chatId, "🚫 حسابك محظور من استخدام هذا البوت.", {
+          protect_content: true,
+        });
         return;
       }
 
@@ -101,8 +103,8 @@ export function initBot() {
               try {
                 await bot.sendMessage(
                   referredBy,
-                  `🎉 مبروك! وصلت إحالاتك إلى *${newCount}* — حصلت على لفة مجانية!`,
-                  { parse_mode: "Markdown" }
+                  `🎉 مبروك! وصلت إحالاتك إلى ${newCount} — حصلت على لفة مجانية!`,
+                  { protect_content: true }
                 );
               } catch { /* user may not have started bot */ }
             }
@@ -124,21 +126,21 @@ export function initBot() {
       const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
 
       const greeting = isNew
-        ? `أهلاً ${firstName}! 🎉\nيسعدنا انضمامك لعائلة *JojoX*`
+        ? `أهلاً ${firstName}!\nيسعدنا انضمامك لعائلة JojoX 🎉`
         : `أهلاً، مرحباً بعودتك ${firstName}! 👋`;
 
       const welcomeText =
         `${greeting}\n\n` +
-        `🎡 *عجلة الحظ تنتظرك!*\n` +
+        `🎡 عجلة الحظ تنتظرك!\n` +
         `دوّر العجلة واربح TON حقيقي\n\n` +
-        `✨ *كيف تكسب أكثر؟*\n` +
+        `✨ كيف تكسب أكثر؟\n` +
         `🔗 ادعُ أصدقاءك ← لفة مجانية لكل 5 أصدقاء\n` +
         `✅ أكمل المهام ← لفات إضافية لكل 5 مهام\n` +
         `🎰 دوّر العجلة ← اربح من 0.05 إلى 4 TON!\n\n` +
-        `🎁 *لديك 3 لفات مجانية للبدء!*`;
+        `🎁 لديك 3 لفات مجانية للبدء!`;
 
       await bot.sendMessage(chatId, welcomeText, {
-        parse_mode: "Markdown",
+        protect_content: true,
         reply_markup: {
           inline_keyboard: [
             [{ text: "🎡 العب الآن", web_app: { url: MINI_APP_URL } }],
@@ -221,8 +223,8 @@ export function initBot() {
 
     await bot.sendMessage(
       msg.chat.id,
-      `✅ تم تسجيلك كمالك البوت!\nـ ID: \`${userId}\`\nـ الآن يمكنك استخدام /admin للوحة التحكم`,
-      { parse_mode: "Markdown" }
+      `✅ تم تسجيلك كمالك البوت!\nID: ${userId}\nالآن يمكنك استخدام /admin للوحة التحكم`,
+      { protect_content: true }
     );
   });
 
@@ -322,14 +324,13 @@ async function processWithdrawal(
 
     const statusText =
       action === "approved"
-        ? `✅ *تمت الموافقة على طلب السحب #${wdId}*\nيرجى إرسال *${parseFloat(wd.amount).toFixed(4)} TON* إلى:\n\`${wd.walletAddress}\``
-        : `❌ *تم رفض طلب السحب #${wdId}*\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON للمستخدم.`;
+        ? `✅ تمت الموافقة على طلب السحب #${wdId}\nيرجى إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى:\n${wd.walletAddress}`
+        : `❌ تم رفض طلب السحب #${wdId}\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON للمستخدم.`;
 
     try {
       await bot.editMessageText(statusText, {
         chat_id: chatId,
         message_id: msgId,
-        parse_mode: "Markdown",
         reply_markup: { inline_keyboard: [] },
       });
     } catch { /* ignore edit errors */ }
@@ -338,9 +339,9 @@ async function processWithdrawal(
     try {
       const userMsg =
         action === "approved"
-          ? `✅ *تمت الموافقة على سحبك!*\n\nسيتم إرسال *${parseFloat(wd.amount).toFixed(4)} TON* إلى محفظتك قريباً.`
-          : `❌ *تم رفض طلب السحب*\n\nتم إعادة *${parseFloat(wd.amount).toFixed(4)} TON* لرصيدك.`;
-      await bot.sendMessage(wd.userId, userMsg, { parse_mode: "Markdown" });
+          ? `✅ تمت الموافقة على سحبك!\n\nسيتم إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك قريباً.`
+          : `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`;
+      await bot.sendMessage(wd.userId, userMsg, { protect_content: true });
     } catch { /* user may not be reachable */ }
   } catch (err) {
     logger.error({ err }, "Error processing withdrawal");
@@ -370,6 +371,7 @@ export async function sendWithdrawalNotification(
 
   try {
     await bot.sendMessage(ownerId, text, {
+      protect_content: true,
       reply_markup: {
         inline_keyboard: [
           [

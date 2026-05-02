@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
 import { api, Withdrawal, getWithdrawalsOnce, invalidateUserCaches } from "../lib/api";
-import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList } from "lucide-react";
+import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList, Zap, Users, Trophy } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
 const TON_ADDRESS_REGEX = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
@@ -10,9 +10,9 @@ function isValidTonAddress(addr: string): boolean {
 }
 
 function statusBadge(status: string) {
-  if (status === "approved") return { label: "تمت الموافقة", color: "#10b981", bg: "rgba(16,185,129,0.13)", border: "rgba(16,185,129,0.35)" };
-  if (status === "rejected") return { label: "مرفوض", color: "#f87171", bg: "rgba(248,113,113,0.13)", border: "rgba(248,113,113,0.35)" };
-  return { label: "قيد المراجعة", color: "#fbbf24", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.35)" };
+  if (status === "approved") return { label: "تمت الموافقة", color: "#10b981", bg: "rgba(16,185,129,0.13)", border: "rgba(16,185,129,0.30)" };
+  if (status === "rejected") return { label: "مرفوض", color: "#f87171", bg: "rgba(248,113,113,0.13)", border: "rgba(248,113,113,0.30)" };
+  return { label: "قيد المراجعة", color: "#fbbf24", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.30)" };
 }
 
 function formatDate(iso: string) {
@@ -82,10 +82,15 @@ export default function AccountPage() {
 
       {/* ── Profile hero ── */}
       <div
-        className="glass flex flex-col items-center gap-3 py-6 slide-up"
+        className="slide-up"
         style={{
-          background: "linear-gradient(145deg, rgba(251,191,36,0.12), rgba(0,0,0,0.40))",
-          border: "1px solid rgba(251,191,36,0.22)",
+          padding: "24px 18px",
+          borderRadius: 24,
+          background: "linear-gradient(145deg, rgba(251,191,36,0.14), rgba(0,0,0,0.45))",
+          border: "1px solid rgba(251,191,36,0.25)",
+          backdropFilter: "blur(20px)",
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
         }}
       >
         {user?.photoUrl ? (
@@ -93,20 +98,20 @@ export default function AccountPage() {
             src={user.photoUrl}
             alt="avatar"
             style={{
-              width: 72, height: 72, borderRadius: "50%", objectFit: "cover",
-              border: "3px solid rgba(251,191,36,0.7)",
-              boxShadow: "0 0 24px rgba(251,191,36,0.40)",
+              width: 76, height: 76, borderRadius: "50%", objectFit: "cover",
+              border: "3px solid rgba(251,191,36,0.75)",
+              boxShadow: "0 0 28px rgba(251,191,36,0.40)",
             }}
           />
         ) : (
           <div
             style={{
-              width: 72, height: 72, borderRadius: "50%",
+              width: 76, height: 76, borderRadius: "50%",
               background: "linear-gradient(135deg, #0a2e18, #1a6e3a)",
-              border: "3px solid rgba(251,191,36,0.7)",
-              boxShadow: "0 0 24px rgba(251,191,36,0.35)",
+              border: "3px solid rgba(251,191,36,0.75)",
+              boxShadow: "0 0 28px rgba(251,191,36,0.35)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontWeight: 900, fontSize: 28, color: "#fbbf24",
+              fontWeight: 900, fontSize: 30, color: "#fbbf24",
             }}
           >
             {userDisplay[0]?.toUpperCase()}
@@ -115,43 +120,50 @@ export default function AccountPage() {
         <div className="text-center">
           <h2 style={{ color: "#fff", fontWeight: 900, fontSize: 20, margin: 0 }}>{userDisplay}</h2>
           {user?.username && (
-            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 2 }}>@{user.username}</p>
+            <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginTop: 2 }}>@{user.username}</p>
           )}
         </div>
 
         {/* Balance */}
-        <div className="text-center mt-1">
-          <div style={{ color: "rgba(251,191,36,0.60)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5 }}>
+        <div
+          className="text-center"
+          style={{
+            background: "rgba(0,0,0,0.25)", borderRadius: 16,
+            padding: "14px 32px", border: "1px solid rgba(251,191,36,0.18)",
+          }}
+        >
+          <div style={{ color: "rgba(251,191,36,0.55)", fontSize: 10, textTransform: "uppercase", letterSpacing: 2 }}>
             رصيدك
           </div>
-          <div className="gold-text" style={{ fontWeight: 900, fontSize: 38, lineHeight: 1.1 }}>
+          <div className="gold-text" style={{ fontWeight: 900, fontSize: 40, lineHeight: 1.15 }}>
             {balance.toFixed(4)}
           </div>
-          <div style={{ color: "rgba(251,191,36,0.65)", fontWeight: 700, fontSize: 13 }}>TON</div>
+          <div style={{ color: "rgba(251,191,36,0.60)", fontWeight: 700, fontSize: 13 }}>TON</div>
         </div>
 
         {/* Stats row */}
         <div
           style={{
-            display: "flex", gap: 0,
-            borderTop: "1px solid rgba(255,255,255,0.10)",
-            marginTop: 8, paddingTop: 14, width: "100%",
+            display: "flex", gap: 0, width: "100%",
+            borderTop: "1px solid rgba(255,255,255,0.09)",
+            paddingTop: 14, marginTop: 2,
           }}
         >
           {[
-            { label: "لفات", value: user?.spins ?? 0, color: "#fbbf24" },
-            { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981" },
-            { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6" },
-          ].map(({ label, value, color }, i, arr) => (
+            { label: "لفات", value: user?.spins ?? 0, color: "#fbbf24", Icon: Zap },
+            { label: "إحالات", value: user?.referralCount ?? 0, color: "#10b981", Icon: Users },
+            { label: "مهام", value: user?.tasksCompleted ?? 0, color: "#3b82f6", Icon: Trophy },
+          ].map(({ label, value, color, Icon }, i, arr) => (
             <div
               key={label}
               style={{
                 flex: 1, textAlign: "center",
-                borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.10)" : "none",
+                borderRight: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.09)" : "none",
               }}
             >
+              <Icon size={14} color={color} style={{ margin: "0 auto 4px" }} />
               <div style={{ color, fontWeight: 900, fontSize: 22 }}>{value}</div>
-              <div style={{ color: "rgba(255,255,255,0.38)", fontSize: 10, textTransform: "uppercase", letterSpacing: 0.8 }}>
+              <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: 0.5 }}>
                 {label}
               </div>
             </div>
@@ -160,20 +172,33 @@ export default function AccountPage() {
       </div>
 
       {/* ── Withdrawal Form ── */}
-      <div className="glass slide-up" style={{ padding: "20px 18px" }}>
+      <div
+        className="slide-up"
+        style={{
+          padding: "20px 18px", borderRadius: 22,
+          background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.10)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <Send size={16} color="#fbbf24" />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>سحب العملات</span>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: "rgba(251,191,36,0.14)", border: "1px solid rgba(251,191,36,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Send size={15} color="#fbbf24" />
+          </div>
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>سحب العملات</span>
           <div style={{ marginRight: "auto" }}>
             <span
               style={{
                 background: canWithdraw ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.07)",
-                border: `1px solid ${canWithdraw ? "rgba(16,185,129,0.40)" : "rgba(255,255,255,0.12)"}`,
-                color: canWithdraw ? "#10b981" : "rgba(255,255,255,0.35)",
-                fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
+                border: `1px solid ${canWithdraw ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)"}`,
+                color: canWithdraw ? "#10b981" : "rgba(255,255,255,0.30)",
+                fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 999,
               }}
             >
-              {canWithdraw ? "مسموح" : `الحد الأدنى ${MIN_WITHDRAWAL} TON`}
+              {canWithdraw ? "✓ مسموح" : `الحد الأدنى ${MIN_WITHDRAWAL} TON`}
             </span>
           </div>
         </div>
@@ -181,8 +206,8 @@ export default function AccountPage() {
         {success && (
           <div
             style={{
-              background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.35)",
-              borderRadius: 14, padding: "10px 14px", marginBottom: 14,
+              background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.30)",
+              borderRadius: 14, padding: "12px 14px", marginBottom: 14,
               display: "flex", alignItems: "center", gap: 8,
             }}
           >
@@ -193,26 +218,27 @@ export default function AccountPage() {
 
         <form onSubmit={handleWithdraw} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div>
-            <label style={{ color: "rgba(255,255,255,0.50)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+            <label style={{
+              color: "rgba(255,255,255,0.45)", fontSize: 11, textTransform: "uppercase",
+              letterSpacing: 1.2, display: "block", marginBottom: 8,
+            }}>
               عنوان محفظة TON
             </label>
             <input
               type="text"
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
-              placeholder="UQ..."
+              placeholder="UQ... أو EQ..."
               disabled={!canWithdraw || submitting}
               dir="ltr"
-              style={{
-                width: "100%", background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
-                padding: "11px 14px", color: "#fff", fontSize: 13,
-                outline: "none", fontFamily: "monospace",
-              }}
+              className="ton-input"
             />
           </div>
           <div>
-            <label style={{ color: "rgba(255,255,255,0.50)", fontSize: 11, textTransform: "uppercase", letterSpacing: 1, display: "block", marginBottom: 6 }}>
+            <label style={{
+              color: "rgba(255,255,255,0.45)", fontSize: 11, textTransform: "uppercase",
+              letterSpacing: 1.2, display: "block", marginBottom: 8,
+            }}>
               المبلغ (TON)
             </label>
             <input
@@ -224,36 +250,25 @@ export default function AccountPage() {
               min={MIN_WITHDRAWAL}
               max={balance}
               disabled={!canWithdraw || submitting}
-              style={{
-                width: "100%", background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.12)", borderRadius: 14,
-                padding: "11px 14px", color: "#fff", fontSize: 13, outline: "none",
-              }}
+              className="ton-input"
             />
           </div>
 
           {error && (
-            <p style={{ color: "#fca5a5", fontSize: 13, margin: 0 }}>{error}</p>
+            <div style={{
+              background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)",
+              borderRadius: 12, padding: "10px 12px",
+              color: "#fca5a5", fontSize: 13,
+            }}>
+              {error}
+            </div>
           )}
 
           <button
             type="submit"
             disabled={!canWithdraw || submitting}
-            style={{
-              width: "100%", padding: "14px",
-              borderRadius: 16, fontWeight: 900, fontSize: 15,
-              border: "none", cursor: canWithdraw ? "pointer" : "not-allowed",
-              ...(canWithdraw
-                ? {
-                    background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
-                    color: "#000",
-                    boxShadow: "0 0 20px rgba(251,191,36,0.40)",
-                  }
-                : {
-                    background: "rgba(255,255,255,0.07)",
-                    color: "rgba(255,255,255,0.28)",
-                  }),
-            }}
+            className={canWithdraw ? "btn-gold" : "btn-disabled"}
+            style={{ width: "100%", padding: "15px", fontSize: 15, border: "none", cursor: canWithdraw ? "pointer" : "not-allowed" }}
           >
             {submitting ? "جاري الإرسال..." : "طلب السحب"}
           </button>
@@ -262,46 +277,59 @@ export default function AccountPage() {
 
       {/* ── TON info ── */}
       <div
-        className="glass"
         style={{
-          padding: "14px 18px",
+          padding: "14px 16px", borderRadius: 18,
           display: "flex", alignItems: "center", gap: 10,
-          background: "rgba(59,130,246,0.10)",
-          border: "1px solid rgba(59,130,246,0.22)",
+          background: "rgba(59,130,246,0.09)",
+          border: "1px solid rgba(59,130,246,0.20)",
+          backdropFilter: "blur(12px)",
         }}
       >
         <Coins size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
-        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, margin: 0 }}>
+        <p style={{ color: "rgba(255,255,255,0.50)", fontSize: 12, margin: 0, lineHeight: 1.5 }}>
           يتم مراجعة طلبات السحب يدوياً من قِبل المالك وإرسال TON لمحفظتك.
         </p>
       </div>
 
       {/* ── Withdrawal History ── */}
-      <div className="glass slide-up" style={{ padding: "20px 18px" }}>
+      <div
+        className="slide-up"
+        style={{
+          padding: "20px 18px", borderRadius: 22,
+          background: "rgba(0,0,0,0.28)", border: "1px solid rgba(255,255,255,0.09)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-          <ClipboardList size={16} color="#fbbf24" />
-          <span style={{ color: "#fff", fontWeight: 700, fontSize: 15 }}>سجل السحوبات</span>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: "rgba(251,191,36,0.14)", border: "1px solid rgba(251,191,36,0.25)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <ClipboardList size={15} color="#fbbf24" />
+          </div>
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>سجل السحوبات</span>
           {withdrawals.length > 0 && (
             <span style={{
               marginRight: "auto",
-              background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.30)",
+              background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.28)",
               color: "#fbbf24", fontSize: 11, fontWeight: 700,
-              padding: "2px 10px", borderRadius: 999,
+              padding: "3px 12px", borderRadius: 999,
             }}>
-              {withdrawals.length} طلب
+              {withdrawals.length}
             </span>
           )}
         </div>
 
         {loadingHistory ? (
-          <div style={{ textAlign: "center", padding: "20px 0", color: "rgba(255,255,255,0.35)", fontSize: 13 }}>
-            <Clock size={20} style={{ marginBottom: 6, opacity: 0.4 }} />
+          <div style={{ textAlign: "center", padding: "20px 0", color: "rgba(255,255,255,0.30)", fontSize: 13 }}>
+            <Clock size={20} style={{ marginBottom: 6, opacity: 0.3 }} />
             <div>جاري التحميل...</div>
           </div>
         ) : withdrawals.length === 0 ? (
           <div style={{ textAlign: "center", padding: "24px 0" }}>
-            <ClipboardList size={32} style={{ color: "rgba(255,255,255,0.15)", marginBottom: 8 }} />
-            <p style={{ color: "rgba(255,255,255,0.30)", fontSize: 13, margin: 0 }}>لا توجد سحوبات بعد</p>
+            <ClipboardList size={32} style={{ color: "rgba(255,255,255,0.12)", marginBottom: 8 }} />
+            <p style={{ color: "rgba(255,255,255,0.28)", fontSize: 13, margin: 0 }}>لا توجد سحوبات بعد</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -313,31 +341,29 @@ export default function AccountPage() {
                   key={w.id}
                   style={{
                     background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.09)",
-                    borderRadius: 14, padding: "12px 14px",
-                    display: "flex", flexDirection: "column", gap: 7,
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 16, padding: "13px 14px",
+                    display: "flex", flexDirection: "column", gap: 8,
                   }}
                 >
-                  {/* Top row: amount + status */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ color: "#fbbf24", fontWeight: 900, fontSize: 17 }}>
+                    <span style={{ color: "#fbbf24", fontWeight: 900, fontSize: 18 }}>
                       {parseFloat(w.amount).toFixed(4)}
-                      <span style={{ color: "rgba(251,191,36,0.60)", fontSize: 11, fontWeight: 600, marginRight: 4 }}>TON</span>
+                      <span style={{ color: "rgba(251,191,36,0.55)", fontSize: 11, fontWeight: 600, marginRight: 5 }}>TON</span>
                     </span>
                     <span style={{
                       background: badge.bg, border: `1px solid ${badge.border}`,
                       color: badge.color, fontSize: 11, fontWeight: 700,
-                      padding: "3px 10px", borderRadius: 999,
+                      padding: "4px 11px", borderRadius: 999,
                     }}>
                       {badge.label}
                     </span>
                   </div>
-                  {/* Bottom row: wallet + date */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, fontFamily: "monospace" }}>
+                    <span style={{ color: "rgba(255,255,255,0.30)", fontSize: 11, fontFamily: "monospace" }}>
                       {shortWallet}
                     </span>
-                    <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 11 }}>
+                    <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}>
                       {formatDate(w.createdAt)}
                     </span>
                   </div>

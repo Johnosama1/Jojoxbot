@@ -219,6 +219,31 @@
   transition: width 0.5s ease;
 }
 
+/* ── Form inputs ── */
+.ton-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+  font-family: monospace;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ton-input:focus {
+  border-color: rgba(251,191,36,0.45);
+  box-shadow: 0 0 0 3px rgba(251,191,36,0.10);
+}
+.ton-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ton-input::placeholder {
+  color: rgba(255,255,255,0.25);
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }

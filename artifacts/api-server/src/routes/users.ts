@@ -6,10 +6,11 @@ import {
   userTasksTable,
 } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { telegramAuth, spinRateLimit } from "../middlewares/telegramAuth";
 
 const router = Router();
 
-router.post("/init", async (req, res) => {
+router.post("/init", telegramAuth, async (req, res) => {
   const { id, username, first_name, last_name, photo_url } = req.body;
   if (!id) {
     res.status(400).json({ error: "Missing id" });
@@ -56,7 +57,7 @@ router.get("/:id", async (req, res) => {
   res.json(user);
 });
 
-router.post("/:id/spin", async (req, res) => {
+router.post("/:id/spin", telegramAuth, spinRateLimit, async (req, res) => {
   const id = parseInt(req.params.id);
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
 

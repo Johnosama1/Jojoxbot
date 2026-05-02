@@ -1,5 +1,10 @@
 const BASE_URL = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
+function getTelegramInitData(): string {
+  return (window as unknown as { Telegram?: { WebApp?: { initData: string } } })
+    .Telegram?.WebApp?.initData || "";
+}
+
 // Module-level caches — fetched once, shared across all component mounts
 let _slotsCache: Promise<WheelSlot[]> | null = null;
 export function getWheelSlotsOnce(): Promise<WheelSlot[]> {
@@ -34,9 +39,16 @@ export function invalidateUserCaches(userId: number) {
 }
 
 export async function apiCall<T>(path: string, options?: RequestInit): Promise<T> {
+  const initData = getTelegramInitData();
+  const baseHeaders: Record<string, string> = { "Content-Type": "application/json" };
+  if (initData) baseHeaders["x-telegram-init-data"] = initData;
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      ...baseHeaders,
+      ...(options?.headers as Record<string, string> | undefined),
+    },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Unknown error" }));
