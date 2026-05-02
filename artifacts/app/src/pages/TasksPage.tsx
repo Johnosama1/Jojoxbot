@@ -143,16 +143,15 @@ export default function TasksPage() {
           }} />
         </div>
       ) : tasks.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "48px 0" }}>
-          <div style={{
-            width: 60, height: 60, borderRadius: 18, margin: "0 auto 12px",
-            background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.20)",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30,
-          }}>
-            📋
-          </div>
-          <p style={{ color: "rgba(255,255,255,0.40)", fontSize: 14 }}>لا توجد مهام متاحة حالياً</p>
-          <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 12, marginTop: 4 }}>تفقّد مجدداً قريباً</p>
+        <div style={{
+          textAlign: "center", padding: "32px 20px",
+          borderRadius: 20, marginTop: 4,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px dashed rgba(255,255,255,0.12)",
+        }}>
+          <div style={{ fontSize: 36, marginBottom: 10, opacity: 0.5 }}>📋</div>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, fontWeight: 600, margin: 0 }}>لا توجد مهام متاحة حالياً</p>
+          <p style={{ color: "rgba(255,255,255,0.22)", fontSize: 12, marginTop: 6 }}>تفقّد مجدداً قريباً</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
