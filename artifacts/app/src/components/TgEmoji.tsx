@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import lottie, { type AnimationItem } from "lottie-web";
-import { decompress } from "fflate";
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
 
-type Format = "tgs" | "webm" | "failed" | "loading";
+type Format = "lottie" | "webm" | "failed" | "loading";
 
 interface TgEmojiProps {
   id: string;
@@ -29,26 +28,21 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     fetch(`${API_BASE}/sticker/${id}`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Not ok");
-        const fmt = res.headers.get("X-Sticker-Format") ?? "webp";
-        const buf = await res.arrayBuffer();
+        const fmt = res.headers.get("X-Sticker-Format") ?? "";
         if (cancelled) return;
 
         if (fmt === "webm") {
+          const buf = await res.arrayBuffer();
+          if (cancelled) return;
           const blob = new Blob([buf], { type: "video/webm" });
           setVideoUrl(URL.createObjectURL(blob));
           setFormat("webm");
-        } else if (fmt === "tgs") {
-          decompress(new Uint8Array(buf), (err, data) => {
-            if (cancelled) return;
-            if (err) { setFormat("failed"); return; }
-            try {
-              const json = JSON.parse(new TextDecoder().decode(data));
-              setLottieData(json);
-              setFormat("tgs");
-            } catch {
-              setFormat("failed");
-            }
-          });
+        } else if (fmt === "lottie") {
+          // Server already decompressed TGS — just parse JSON
+          const json = await res.json();
+          if (cancelled) return;
+          setLottieData(json);
+          setFormat("lottie");
         } else {
           setFormat("failed");
         }
@@ -59,7 +53,7 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
   }, [id]);
 
   useEffect(() => {
-    if (format !== "tgs" || !lottieData || !containerRef.current) return;
+    if (format !== "lottie" || !lottieData || !containerRef.current) return;
     animRef.current?.destroy();
     animRef.current = lottie.loadAnimation({
       container: containerRef.current,
@@ -75,35 +69,29 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
   }, [format, lottieData]);
 
   useEffect(() => {
-    return () => {
-      if (videoUrl) URL.revokeObjectURL(videoUrl);
-    };
+    return () => { if (videoUrl) URL.revokeObjectURL(videoUrl); };
   }, [videoUrl]);
 
-  if (format === "failed") {
-    return (
-      <span style={{ fontSize: size * 0.85, lineHeight: 1, display: "inline-block", ...style }}>
-        {fallback}
-      </span>
-    );
-  }
+  const fallbackEl = (
+    <span style={{ fontSize: size * 0.85, lineHeight: 1, display: "inline-block", ...style }}>
+      {fallback}
+    </span>
+  );
+
+  if (format === "failed") return fallbackEl;
 
   if (format === "webm" && videoUrl) {
     return (
       <video
         src={videoUrl}
-        autoPlay
-        loop
-        muted
-        playsInline
-        width={size}
-        height={size}
+        autoPlay loop muted playsInline
+        width={size} height={size}
         style={{ display: "inline-block", objectFit: "contain", ...style }}
       />
     );
   }
 
-  if (format === "tgs") {
+  if (format === "lottie") {
     return (
       <div
         ref={containerRef}
@@ -112,10 +100,6 @@ export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps
     );
   }
 
-  // Loading — show fallback emoji
-  return (
-    <span style={{ fontSize: size * 0.85, lineHeight: 1, display: "inline-block", ...style }}>
-      {fallback}
-    </span>
-  );
+  // Loading → show fallback emoji until ready
+  return fallbackEl;
 }
