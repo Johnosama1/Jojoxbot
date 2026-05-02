@@ -23,6 +23,11 @@
           window.Telegram.WebApp.setHeaderColor('#020e06');
         }
       } catch(e) {}
+      // Disable right-click context menu and copy shortcuts
+      document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+      document.addEventListener('copy', function(e) { e.preventDefault(); });
+      document.addEventListener('cut', function(e) { e.preventDefault(); });
+      document.addEventListener('selectstart', function(e) { e.preventDefault(); });
     </script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
