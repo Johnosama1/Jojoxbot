@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "lottie-web": "^5.13.0"
   }
 }
