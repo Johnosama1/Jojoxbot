@@ -162,12 +162,37 @@ export function initBot() {
       .from(botSettingsTable)
       .where(eq(botSettingsTable.key, "owner_telegram_id"))
       .limit(1);
-    if (existing.length === 0) {
+    const isFirstTime = existing.length === 0;
+    if (isFirstTime) {
       await db.insert(botSettingsTable).values({
         key: "owner_telegram_id",
         value: String(userId),
       });
       logger.info({ userId }, "Owner telegram ID saved automatically");
+
+      // Re-send all pending withdrawal notifications that were missed
+      try {
+        const pendingWithdrawals = await db
+          .select({ w: withdrawalsTable, u: usersTable })
+          .from(withdrawalsTable)
+          .leftJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id))
+          .where(eq(withdrawalsTable.status, "pending"));
+
+        for (const { w, u } of pendingWithdrawals) {
+          await sendWithdrawalNotification(
+            userId,
+            { firstName: u?.firstName || "", username: u?.username, id: w.userId },
+            w.amount,
+            w.walletAddress,
+            w.id
+          );
+        }
+        if (pendingWithdrawals.length > 0) {
+          logger.info({ count: pendingWithdrawals.length }, "Re-sent pending withdrawal notifications");
+        }
+      } catch (err) {
+        logger.error({ err }, "Failed to re-send pending withdrawals");
+      }
     }
 
     await showAdminMenu(bot, msg.chat.id);
