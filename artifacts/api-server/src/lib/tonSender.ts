@@ -1,9 +1,10 @@
-import { TonClient, WalletContractV4, toNano, Address, internal } from "@ton/ton";
+import { TonClient4, WalletContractV4, toNano, Address, internal } from "@ton/ton";
 import { mnemonicToPrivateKey } from "@ton/crypto";
 import { logger } from "./logger";
 
+// TonClient4 uses tonhubapi.com — no API key needed, no strict rate limits
 const ENDPOINT =
-  process.env.TON_ENDPOINT || "https://toncenter.com/api/v2/jsonRPC";
+  process.env.TON_ENDPOINT || "https://mainnet-v4.tonhubapi.com";
 
 export interface TonSendResult {
   txRef: string;
@@ -21,10 +22,7 @@ export async function sendTon(
 
   const keyPair = await mnemonicToPrivateKey(words);
 
-  const client = new TonClient({
-    endpoint: ENDPOINT,
-    apiKey: process.env.TON_API_KEY || undefined,
-  });
+  const client = new TonClient4({ endpoint: ENDPOINT });
 
   const wallet = client.open(
     WalletContractV4.create({ publicKey: keyPair.publicKey, workchain: 0 })
