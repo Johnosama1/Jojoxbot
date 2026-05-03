@@ -6,6 +6,7 @@ import wheelRouter from "./wheel";
 import withdrawalsRouter from "./withdrawals";
 import adminRouter from "./admin";
 import stickerRouter from "./sticker";
+import verifyRouter from "./verify";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use("/wheel", wheelRouter);
 router.use("/withdrawals", withdrawalsRouter);
 router.use("/admin", adminRouter);
 router.use("/sticker", stickerRouter);
+router.use(verifyRouter);
 
 export default router;

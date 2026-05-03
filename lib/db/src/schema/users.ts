@@ -16,6 +16,8 @@ export const usersTable = pgTable("users", {
   isVisible: boolean("is_visible").notNull().default(true),
   ipHash: text("ip_hash"),
   ipVerifiedAt: timestamp("ip_verified_at"),
+  userAgent: text("user_agent"),
+  verificationToken: text("verification_token"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

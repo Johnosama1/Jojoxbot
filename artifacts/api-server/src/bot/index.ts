@@ -1,4 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
+import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -138,6 +139,40 @@ export function initBot() {
             firstName: firstName || existing[0].firstName,
           })
           .where(eq(usersTable.id, userId));
+      }
+
+      // ── Verification gate ─────────────────────────────────────────
+      const isVerified = !isNew && existing[0].ipVerifiedAt != null;
+
+      if (!isVerified) {
+        // Reuse existing token or generate a new one
+        const existingToken = !isNew ? existing[0].verificationToken : null;
+        let token = existingToken;
+        if (!token) {
+          token = randomBytes(16).toString("hex");
+          await db
+            .update(usersTable)
+            .set({ verificationToken: token })
+            .where(eq(usersTable.id, userId));
+        }
+
+        const API_BASE_URL =
+          process.env.API_BASE_URL ||
+          `https://${process.env.REPLIT_DEV_DOMAIN}`;
+        const verifyUrl = `${API_BASE_URL}/api/verify?uid=${userId}&token=${token}`;
+
+        await bot.sendMessage(
+          chatId,
+          `👋 أهلاً ${firstName}!\n\n🔐 يجب عليك إكمال التحقق أولاً قبل استخدام البوت.\n\n📋 الخطوات:\n1️⃣ اضغط على زر التحقق أدناه\n2️⃣ حل المسألة البسيطة\n3️⃣ عُد هنا واستمتع بالربح!`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "✅ تحقق الآن", url: verifyUrl }],
+              ],
+            },
+          },
+        );
+        return;
       }
 
       const MINI_APP_URL =
