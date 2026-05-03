@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, wheelSlotsTable } from "@workspace/db/schema";
-import { eq, sql, and, ne } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { telegramAuth, spinRateLimit } from "../middlewares/telegramAuth";
 
 const router = Router();
@@ -51,47 +51,17 @@ router.post("/init", telegramAuth, async (req, res) => {
     return;
   }
 
-  // ── IP Verification (first-time only) ────────────────────────────
+  // Record IP for informational purposes only (no auto-ban)
   if (!user.ipVerifiedAt) {
     const rawIp = normalizeIp(req.ip || req.socket.remoteAddress || "");
-
     if (rawIp) {
       const ipHash = hashIp(rawIp);
-
-      // Check if another active account already owns this IP
-      const [duplicate] = await db
-        .select({ id: usersTable.id })
-        .from(usersTable)
-        .where(
-          and(
-            eq(usersTable.ipHash, ipHash),
-            ne(usersTable.id, user.id),
-            eq(usersTable.isVisible, true),
-          )
-        )
-        .limit(1);
-
-      if (duplicate) {
-        // Ban the newer (current) account — original stays active
-        await db
-          .update(usersTable)
-          .set({ isVisible: false })
-          .where(eq(usersTable.id, user.id));
-
-        res.status(403).json({ error: "محظور", banned: true, reason: "duplicate_ip" });
-        return;
-      }
-
-      // Unique IP — record it and mark verified
-      await db
-        .update(usersTable)
-        .set({ ipHash, ipVerifiedAt: new Date() })
-        .where(eq(usersTable.id, user.id));
+      await db.update(usersTable).set({ ipHash }).where(eq(usersTable.id, user.id));
     }
   }
 
   res.setHeader("Cache-Control", "no-store");
-  res.json(user);
+  res.json({ ...user, isVerified: user.ipVerifiedAt != null });
 });
 
 router.get("/:id", async (req, res) => {
@@ -100,7 +70,7 @@ router.get("/:id", async (req, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
   res.setHeader("Cache-Control", "private, max-age=5");
-  res.json(user);
+  res.json({ ...user, isVerified: user.ipVerifiedAt != null });
 });
 
 router.post("/:id/spin", telegramAuth, spinRateLimit, async (req, res) => {

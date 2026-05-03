@@ -2,9 +2,10 @@ import { Router } from "express";
 import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { getBot, sendWelcomeMessage } from "../bot/index";
 import { logger } from "../lib/logger";
+import { telegramAuth } from "../middlewares/telegramAuth";
 
 const router = Router();
 
@@ -217,6 +218,100 @@ router.post("/verify", async (req, res) => {
   } catch { /* bot message is non-critical */ }
 
   res.send(successHtml("تم التحقق بنجاح! عُد إلى تيليجرام واضغط على زر &laquo;افتح التطبيق&raquo;."));
+});
+
+// ── POST /verify-device — Mini-App device fingerprint verification ──
+router.post("/verify-device", telegramAuth, async (req, res) => {
+  const userId = (req as unknown as { telegramUserId?: number }).telegramUserId;
+  const { deviceId } = req.body as { deviceId?: string };
+
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!deviceId || deviceId.length < 8) {
+    res.status(400).json({ error: "Invalid device ID" });
+    return;
+  }
+
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (user.isVisible === false) {
+    res.status(403).json({ error: "محظور", banned: true });
+    return;
+  }
+
+  // Already verified — nothing to do
+  if (user.ipVerifiedAt) {
+    res.json({ success: true, alreadyVerified: true });
+    return;
+  }
+
+  // Check if this device fingerprint already belongs to another active account
+  const [duplicate] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(
+      and(
+        eq(usersTable.deviceId, deviceId),
+        ne(usersTable.id, userId),
+        eq(usersTable.isVisible, true),
+      )
+    )
+    .limit(1);
+
+  if (duplicate) {
+    await db
+      .update(usersTable)
+      .set({ isVisible: false })
+      .where(eq(usersTable.id, userId));
+
+    logger.warn({ userId, duplicateOf: duplicate.id }, "Duplicate device — account banned");
+
+    try {
+      const bot = getBot();
+      if (bot) {
+        await bot.sendMessage(userId, "🚫 تم حظر حسابك بسبب اكتشاف حساب مكرر من نفس الجهاز.");
+      }
+    } catch { /* user may have blocked bot */ }
+
+    res.status(403).json({ error: "محظور", banned: true, reason: "duplicate_device" });
+    return;
+  }
+
+  // Collect IP for informational record
+  const rawIp = normalizeIp(req.ip || req.socket.remoteAddress || "");
+  const ipHash = rawIp ? hashIp(rawIp) : null;
+
+  // Mark verified
+  await db
+    .update(usersTable)
+    .set({
+      ipVerifiedAt: new Date(),
+      deviceId,
+      ipHash: ipHash || user.ipHash,
+      verificationToken: null,
+    })
+    .where(eq(usersTable.id, userId));
+
+  // Notify via bot that verification succeeded
+  try {
+    const bot = getBot();
+    if (bot) {
+      await sendWelcomeMessage(userId, userId, user.firstName || "");
+    }
+  } catch { /* ignore */ }
+
+  res.json({ success: true });
 });
 
 export default router;

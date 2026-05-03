@@ -5,6 +5,7 @@ import { UserProvider, useUser } from "./lib/userContext";
 import TabBar from "./components/TabBar";
 import AnimatedBackground from "./components/AnimatedBackground";
 import HomePage from "./pages/HomePage";
+import VerificationScreen from "./pages/VerificationScreen";
 
 const TasksPage    = lazy(() => import("./pages/TasksPage"));
 const ReferralPage = lazy(() => import("./pages/ReferralPage"));
@@ -52,8 +53,17 @@ const ROUTES = [
 
 function PersistentRouter() {
   const [location] = useLocation();
-  const { banned } = useUser();
+  const { banned, user, loading, refresh } = useUser();
   if (banned) return <BannedScreen />;
+  if (!loading && user && !user.isVerified) {
+    return (
+      <VerificationScreen
+        firstName={user.firstName || ""}
+        onVerified={refresh}
+        onBanned={() => window.location.reload()}
+      />
+    );
+  }
 
   return (
     <>

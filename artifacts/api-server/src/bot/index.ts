@@ -275,7 +275,22 @@ function setupBotHandlers() {
       const isVerified = !isNew && existing[0].ipVerifiedAt != null;
 
       if (!isVerified) {
-        await sendCaptchaChallenge(chatId, userId, firstName);
+        const MINI_APP_URL =
+          process.env.MINI_APP_URL ||
+          `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
+
+        await bot.sendMessage(
+          chatId,
+          `👋 أهلاً ${firstName}!\n\n🎰 مرحباً بك في *Jo-jokes* — أسرع بوت ربح TON!\n\n🔐 خطوة واحدة للبدء:\nافتح التطبيق وأكمل التحقق السريع للحصول على وصول كامل.`,
+          {
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🔐 ابدأ التحقق والدخول", web_app: { url: MINI_APP_URL } }],
+              ],
+            },
+          }
+        );
         return;
       }
 

@@ -91,6 +91,12 @@ export const api = {
   adminUpdateUserBalance: (adminId: number, userId: number, balance?: number, spins?: number) =>
     apiCall<User>(`/admin/users/${userId}/balance`, { method: "PUT", body: JSON.stringify({ balance, spins }), headers: { "Content-Type": "application/json", "x-user-id": String(adminId) } }),
   adminGetWithdrawals: (userId: number) => apiCall<Withdrawal[]>("/admin/withdrawals", { headers: { "Content-Type": "application/json", "x-user-id": String(userId) } }),
+
+  verifyDevice: (deviceId: string) =>
+    apiCall<{ success: boolean; alreadyVerified?: boolean }>("/verify-device", {
+      method: "POST",
+      body: JSON.stringify({ deviceId }),
+    }),
 };
 
 export interface User {
@@ -105,6 +111,7 @@ export interface User {
   tasksCompleted: number;
   referredBy: number | null;
   createdAt: string;
+  isVerified: boolean;
 }
 
 export interface Task {
