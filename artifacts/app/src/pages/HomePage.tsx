@@ -15,13 +15,15 @@ export default function HomePage() {
     if (!user || spinning || user.spins <= 0) return;
     setError("");
     setShowResult(false);
+    setWinnerIndex(null);
+    setSpinning(true); // start wheel immediately — don't wait for API
     try {
       const result = await api.spin(user.id);
-      setWinnerIndex(result.slotIndex);
+      setWinnerIndex(result.slotIndex); // wheel lands when API returns
       setWinAmount(result.winner.amount);
-      setSpinning(true);
       await refresh();
     } catch (e: unknown) {
+      setSpinning(false); // stop wheel on error
       setError(e instanceof Error ? e.message : "فشل الدوران");
     }
   };

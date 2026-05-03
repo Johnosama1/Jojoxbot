@@ -20,7 +20,7 @@ router.post("/init", telegramAuth, async (req, res) => {
       firstName: first_name || "",
       lastName: last_name || "",
       photoUrl: photo_url || null,
-      spins: 1,
+      spins: 3,
     })
     .onConflictDoUpdate({
       target: usersTable.id,

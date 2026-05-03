@@ -22,7 +22,7 @@ let bot: TelegramBot;
 
 // ── Lightweight command spam guard (no external deps) ─────────────────
 const cmdTimestamps = new Map<number, number>();
-const CMD_COOLDOWN_MS = 3_000; // max 1 command per 3 seconds per user
+const CMD_COOLDOWN_MS = 1_000; // max 1 command per second per user
 
 function isCommandSpam(userId: number): boolean {
   const now = Date.now();

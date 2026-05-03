@@ -292,6 +292,29 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
     ctx.restore();
   };
 
+  // Free-spin phase: wheel spinning fast while waiting for API result
+  useEffect(() => {
+    if (!spinning || winnerIndex !== null || slots.length === 0) return;
+    cancelAnimationFrame(animFrameRef.current);
+
+    const SPEED = (2 * Math.PI * 3) / 1000; // 3 full rotations per second
+    let last = performance.now();
+    let frame = glowFrameRef.current;
+
+    const animate = (now: number) => {
+      const delta = Math.min(now - last, 50);
+      last = now;
+      frame++;
+      rotationRef.current = (rotationRef.current + SPEED * delta) % (2 * Math.PI);
+      glowFrameRef.current = frame;
+      drawWheel(rotationRef.current, frame);
+      animFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [spinning, winnerIndex, slots]);
+
   // Idle glow animation
   useEffect(() => {
     if (spinning) return;
