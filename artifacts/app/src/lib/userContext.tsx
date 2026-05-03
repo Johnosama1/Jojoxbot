@@ -72,8 +72,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setUser(cachedUser);
         setSlots(cachedSlots);
         setLoading(false);
-        hideSplash(); // ← instant reveal from cache
       }
+
+      // ── Hide splash NOW — don't wait for API ──────────────────────
+      // User sees the wheel UI immediately; data fills in from cache or network.
+      hideSplash();
 
       // ── Step 2: Kick off all network requests in parallel ─────────
       const slotsPromise = getWheelSlotsOnce();
