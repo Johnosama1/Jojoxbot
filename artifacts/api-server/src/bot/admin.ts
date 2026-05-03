@@ -479,7 +479,13 @@ export async function handleAdminCallback(
 
     else if (sec === "u" && act === "unban" && p1) {
       const targetId = parseInt(p1);
-      await db.update(usersTable).set({ isVisible: true }).where(eq(usersTable.id, targetId));
+      // Set ipVerifiedAt so the user skips IP verification on next /start
+      // (prevents re-ban loop when the user goes through verification again)
+      await db.update(usersTable).set({
+        isVisible: true,
+        ipVerifiedAt: new Date(),
+        verificationToken: null,
+      }).where(eq(usersTable.id, targetId));
       try {
         await bot.sendMessage(targetId,
           "✅ تم رفع الحظر عن حسابك. يمكنك الآن استخدام البوت مجدداً!",
