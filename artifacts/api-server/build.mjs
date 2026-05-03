@@ -17,7 +17,10 @@ async function buildAll() {
   const start = Date.now();
 
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [
+      path.resolve(artifactDir, "src/index.ts"),
+      path.resolve(artifactDir, "src/vercel-entry.ts"),
+    ],
     platform: "node",
     bundle: true,
     format: "esm",

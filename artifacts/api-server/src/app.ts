@@ -27,6 +27,8 @@ const ALLOWED_ORIGINS = [
   /^https:\/\/.*\.tgwebapp\.net$/,
   /^https:\/\/.*\.replit\.dev$/,
   /^https:\/\/.*\.replit\.app$/,
+  /^https:\/\/.*\.vercel\.app$/,
+  /^https:\/\/.*\.vercel\.dev$/,
   /^http:\/\/localhost(:\d+)?$/,
 ];
 app.use(cors({

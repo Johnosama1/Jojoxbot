@@ -119,13 +119,26 @@ export function initBot() {
     logger.warn("No TELEGRAM_BOT_TOKEN — bot disabled");
     return;
   }
-
   bot = new TelegramBot(TOKEN, { polling: true });
-
   bot.on("polling_error", (err) => {
     logger.error({ err }, "Bot polling error");
   });
+  setupBotHandlers();
+}
 
+export function initBotWebhook(webhookUrl: string) {
+  if (!TOKEN) {
+    logger.warn("No TELEGRAM_BOT_TOKEN — bot disabled");
+    return;
+  }
+  bot = new TelegramBot(TOKEN, {});
+  bot.setWebHook(webhookUrl)
+    .then(() => logger.info({ webhookUrl }, "Telegram webhook registered"))
+    .catch(err => logger.error({ err }, "Failed to set webhook"));
+  setupBotHandlers();
+}
+
+function setupBotHandlers() {
   // ───────────────────────────── /start ─────────────────────────────
   bot.onText(/\/start(.*)/, async (msg, match) => {
     try {
@@ -227,6 +240,7 @@ export function initBot() {
 
         const API_BASE_URL =
           process.env.API_BASE_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
           `https://${process.env.REPLIT_DEV_DOMAIN}`;
         const verifyUrl = `${API_BASE_URL}/api/verify?uid=${userId}&token=${token}`;
 
