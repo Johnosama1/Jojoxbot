@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq, and, ne } from "drizzle-orm";
-import { getBot } from "../bot/index";
+import { getBot, sendWelcomeMessage } from "../bot/index";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -236,24 +236,15 @@ router.post("/verify", async (req, res) => {
 
   logger.info({ userId: uid }, "User verified successfully via web page");
 
-  // Send bot confirmation + app button
+  // Send bot confirmation then welcome message immediately after
   try {
     const bot = getBot();
-    const MINI_APP_URL =
-      (process.env.MINI_APP_URL || `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`) + `?uid=${uid}`;
-
     if (bot) {
       await bot.sendMessage(
         uid,
         `✅ تم التحقق بنجاح!\n\n🎉 مرحباً بك في Jo-jokes!\nيمكنك الآن الدخول إلى التطبيق وبدء الربح.`,
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "🎁 افتح التطبيق الآن", web_app: { url: MINI_APP_URL } }],
-            ],
-          },
-        },
       );
+      await sendWelcomeMessage(uid, uid, user.firstName || "");
     }
   } catch { /* bot message is non-critical */ }
 

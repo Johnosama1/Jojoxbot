@@ -45,6 +45,74 @@ export function getBot(): TelegramBot {
   return bot;
 }
 
+// ── Shared welcome message sender ────────────────────────────────────
+const utf16Len = (s: string): number => {
+  let n = 0;
+  for (const ch of s) n += (ch.codePointAt(0)! > 0xffff) ? 2 : 1;
+  return n;
+};
+
+interface MsgPart { text: string; emojiId?: string }
+const buildMsg = (parts: MsgPart[]) => {
+  let text = "";
+  let offset = 0;
+  const entities: object[] = [];
+  for (const p of parts) {
+    if (p.emojiId) {
+      entities.push({ type: "custom_emoji", offset, length: utf16Len(p.text), custom_emoji_id: p.emojiId });
+    }
+    text += p.text;
+    offset += utf16Len(p.text);
+  }
+  return { text, entities };
+};
+
+export async function sendWelcomeMessage(chatId: number, userId: number, firstName: string) {
+  const MINI_APP_URL =
+    process.env.MINI_APP_URL ||
+    `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
+
+  const { text: welcomeText, entities: welcomeEntities } = buildMsg([
+    { text: "👋", emojiId: "5319007286004299794" },
+    { text: ` أهلاً بيك في Jo-jokes\n\n` },
+    { text: "😀", emojiId: "6129832240303051599" },
+    { text: ` مرحباً يا ${firstName} في أسرع بوت ربح TON\n\n` },
+    { text: "✨", emojiId: "6131673419768403090" },
+    { text: " كيف تكسب من البوت" },
+    { text: "❓", emojiId: "5436113877181941026" },
+    { text: "\n\n" },
+    { text: "✅", emojiId: "6203840986443944067" },
+    { text: " أكمل المهام " },
+    { text: "⬅️", emojiId: "6131729520631223468" },
+    { text: " لفات إضافية لكل " },
+    { text: "5️⃣", emojiId: "6203785577070858514" },
+    { text: " مهام\n\n" },
+    { text: "👥", emojiId: "6204118338252049831" },
+    { text: " ادعُ أصدقاءك " },
+    { text: "⬅️", emojiId: "6131729520631223468" },
+    { text: " لفة مجانية لكل " },
+    { text: "5️⃣", emojiId: "6203785577070858514" },
+    { text: " أصدقاء\n\n" },
+    { text: "🎰", emojiId: "5104986024807760966" },
+    { text: " دوّر العجلة " },
+    { text: "⬅️", emojiId: "6131729520631223468" },
+    { text: " اربح من 0.05 إلى 4 TON!\n\n" },
+    { text: "🎁", emojiId: "6129832240303051599" },
+    { text: " لديك " },
+    { text: "✅", emojiId: "6203840986443944067" },
+    { text: " لفات مجانية للبدء!" },
+  ]);
+
+  await bot.sendMessage(chatId, welcomeText, {
+    entities: welcomeEntities as any,
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🎁 Open now", web_app: { url: `${MINI_APP_URL}?uid=${userId}` } }],
+      ],
+    },
+  });
+}
+
 export function initBot() {
   if (!TOKEN) {
     logger.warn("No TELEGRAM_BOT_TOKEN — bot disabled");
@@ -175,73 +243,7 @@ export function initBot() {
         return;
       }
 
-      const MINI_APP_URL =
-        process.env.MINI_APP_URL ||
-        `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
-      const BOT_USERNAME = process.env.BOT_USERNAME || "Jojox1bot";
-
-      // Returns the number of UTF-16 code units in a string (Telegram uses UTF-16 offsets)
-      const utf16Len = (s: string): number => {
-        let n = 0;
-        for (const ch of s) n += (ch.codePointAt(0)! > 0xffff) ? 2 : 1;
-        return n;
-      };
-
-      // Build message text + custom_emoji entities in one pass
-      interface MsgPart { text: string; emojiId?: string }
-      const buildMsg = (parts: MsgPart[]) => {
-        let text = "";
-        let offset = 0;
-        const entities: object[] = [];
-        for (const p of parts) {
-          if (p.emojiId) {
-            entities.push({ type: "custom_emoji", offset, length: utf16Len(p.text), custom_emoji_id: p.emojiId });
-          }
-          text += p.text;
-          offset += utf16Len(p.text);
-        }
-        return { text, entities };
-      };
-
-      const { text: welcomeText, entities: welcomeEntities } = buildMsg([
-        { text: "👋", emojiId: "5319007286004299794" },
-        { text: ` أهلاً بيك في Jo-jokes\n\n` },
-        { text: "😀", emojiId: "6129832240303051599" },
-        { text: ` مرحباً يا ${firstName} في أسرع بوت ربح TON\n\n` },
-        { text: "✨", emojiId: "6131673419768403090" },
-        { text: " كيف تكسب من البوت" },
-        { text: "❓", emojiId: "5436113877181941026" },
-        { text: "\n\n" },
-        { text: "✅", emojiId: "6203840986443944067" },
-        { text: " أكمل المهام " },
-        { text: "⬅️", emojiId: "6131729520631223468" },
-        { text: " لفات إضافية لكل " },
-        { text: "5️⃣", emojiId: "6203785577070858514" },
-        { text: " مهام\n\n" },
-        { text: "👥", emojiId: "6204118338252049831" },
-        { text: " ادعُ أصدقاءك " },
-        { text: "⬅️", emojiId: "6131729520631223468" },
-        { text: " لفة مجانية لكل " },
-        { text: "5️⃣", emojiId: "6203785577070858514" },
-        { text: " أصدقاء\n\n" },
-        { text: "🎰", emojiId: "5104986024807760966" },
-        { text: " دوّر العجلة " },
-        { text: "⬅️", emojiId: "6131729520631223468" },
-        { text: " اربح من 0.05 إلى 4 TON!\n\n" },
-        { text: "🎁", emojiId: "6129832240303051599" },
-        { text: " لديك " },
-        { text: "✅", emojiId: "6203840986443944067" },
-        { text: " لفات مجانية للبدء!" },
-      ]);
-
-      await bot.sendMessage(chatId, welcomeText, {
-        entities: welcomeEntities as any,
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "🎁 Open now", web_app: { url: `${MINI_APP_URL}?uid=${userId}` } }],
-          ],
-        },
-      });
+      await sendWelcomeMessage(chatId, userId, firstName);
     } catch (err) {
       logger.error({ err }, "Error in /start handler");
     }
