@@ -14,6 +14,8 @@ export const usersTable = pgTable("users", {
   tasksCompleted: integer("tasks_completed").notNull().default(0),
   referredBy: bigint("referred_by", { mode: "number" }),
   isVisible: boolean("is_visible").notNull().default(true),
+  ipHash: text("ip_hash"),
+  ipVerifiedAt: timestamp("ip_verified_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

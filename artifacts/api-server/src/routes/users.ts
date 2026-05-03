@@ -1,10 +1,23 @@
 import { Router } from "express";
+import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, wheelSlotsTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, ne } from "drizzle-orm";
 import { telegramAuth, spinRateLimit } from "../middlewares/telegramAuth";
 
 const router = Router();
+
+// Fixed salt — change this in production via IP_HASH_SALT env var
+const IP_SALT = process.env.IP_HASH_SALT || "jojox_ip_salt_2025";
+
+function hashIp(ip: string): string {
+  return createHash("sha256").update(ip + IP_SALT).digest("hex");
+}
+
+function normalizeIp(raw: string): string {
+  // Strip IPv4-mapped IPv6 prefix (::ffff:1.2.3.4 → 1.2.3.4)
+  return (raw || "").replace(/^::ffff:/, "").trim();
+}
 
 // ── Single-query upsert init — fast path for returning users ─────────
 router.post("/init", telegramAuth, async (req, res) => {
@@ -36,6 +49,45 @@ router.post("/init", telegramAuth, async (req, res) => {
   if (user.isVisible === false) {
     res.status(403).json({ error: "محظور", banned: true });
     return;
+  }
+
+  // ── IP Verification (first-time only) ────────────────────────────
+  if (!user.ipVerifiedAt) {
+    const rawIp = normalizeIp(req.ip || req.socket.remoteAddress || "");
+
+    if (rawIp) {
+      const ipHash = hashIp(rawIp);
+
+      // Check if another active account already owns this IP
+      const [duplicate] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.ipHash, ipHash),
+            ne(usersTable.id, user.id),
+            eq(usersTable.isVisible, true),
+          )
+        )
+        .limit(1);
+
+      if (duplicate) {
+        // Ban the newer (current) account — original stays active
+        await db
+          .update(usersTable)
+          .set({ isVisible: false })
+          .where(eq(usersTable.id, user.id));
+
+        res.status(403).json({ error: "محظور", banned: true, reason: "duplicate_ip" });
+        return;
+      }
+
+      // Unique IP — record it and mark verified
+      await db
+        .update(usersTable)
+        .set({ ipHash, ipVerifiedAt: new Date() })
+        .where(eq(usersTable.id, user.id));
+    }
   }
 
   res.setHeader("Cache-Control", "no-store");

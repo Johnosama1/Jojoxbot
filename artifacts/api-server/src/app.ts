@@ -8,6 +8,9 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 const app: Express = express();
 
+// ── Trust Replit's reverse proxy so req.ip is the real client IP ─────
+app.set("trust proxy", 1);
+
 // ── Security headers (helmet) ────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false, // Telegram Mini App needs flexibility
