@@ -16,7 +16,8 @@ export async function executeAutoWithdrawal(
   withdrawalId: number,
   userId: number,
   walletAddress: string,
-  amount: string
+  amount: string,
+  adminChatId?: number
 ) {
   const bot = getBot();
   try {
@@ -34,17 +35,31 @@ export async function executeAutoWithdrawal(
       })
       .where(eq(withdrawalsTable.id, withdrawalId));
 
-    try {
-      if (bot) {
+    if (bot) {
+      // Notify user
+      try {
         await bot.sendMessage(
           userId,
-          `✅ تم إرسال ${parseFloat(amount).toFixed(4)} TON إلى محفظتك تلقائياً!\n\n` +
+          `✅ تم إرسال ${parseFloat(amount).toFixed(4)} TON إلى محفظتك!\n\n` +
           `📍 المحفظة: \`${walletAddress}\`\n` +
-          `🔑 مرجع المعاملة: \`${result.txRef}\``,
+          `🔑 مرجع: \`${result.txRef}\``,
           { parse_mode: "Markdown" }
         );
+      } catch { /* ignore */ }
+
+      // Notify admin
+      if (adminChatId) {
+        try {
+          await bot.sendMessage(
+            adminChatId,
+            `✅ تم إرسال *${parseFloat(amount).toFixed(4)} TON* بنجاح!\n` +
+            `📍 \`${walletAddress}\`\n` +
+            `🔑 \`${result.txRef}\``,
+            { parse_mode: "Markdown" }
+          );
+        } catch { /* ignore */ }
       }
-    } catch { /* ignore notification error */ }
+    }
 
   } catch (err) {
     logger.error({ err, withdrawalId }, "TON transfer failed");
@@ -59,14 +74,27 @@ export async function executeAutoWithdrawal(
       .set({ status: "failed", errorMsg: errMsg })
       .where(eq(withdrawalsTable.id, withdrawalId));
 
-    try {
-      if (bot) {
+    if (bot) {
+      // Notify user
+      try {
         await bot.sendMessage(
           userId,
           `❌ فشل إرسال ${parseFloat(amount).toFixed(4)} TON.\n` +
           `تم إعادة المبلغ لرصيدك. حاول مرة أخرى لاحقاً.`
         );
+      } catch { /* ignore */ }
+
+      // Notify admin
+      if (adminChatId) {
+        try {
+          await bot.sendMessage(
+            adminChatId,
+            `❌ فشل إرسال *${parseFloat(amount).toFixed(4)} TON*\n` +
+            `السبب: ${errMsg}`,
+            { parse_mode: "Markdown" }
+          );
+        } catch { /* ignore */ }
       }
-    } catch { /* ignore */ }
+    }
   }
 }

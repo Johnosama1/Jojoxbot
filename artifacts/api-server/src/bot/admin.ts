@@ -693,6 +693,13 @@ export async function handleAdminText(
         `✅ تمت إضافة *${val} TON* للمستخدم ${targetId}\nالرصيد الجديد: *${parseFloat(u.balance).toFixed(4)} TON*`,
         { parse_mode: "Markdown" }
       );
+      // Notify user
+      try {
+        await bot.sendMessage(targetId,
+          `💰 تم إضافة *${val} TON* لرصيدك!\nرصيدك الحالي: *${parseFloat(u.balance).toFixed(4)} TON*`,
+          { parse_mode: "Markdown" }
+        );
+      } catch { /* user may have blocked bot */ }
       return true;
     }
 
@@ -711,6 +718,13 @@ export async function handleAdminText(
         `✅ تم خصم *${val} TON* من المستخدم ${targetId}\nالرصيد الجديد: *${parseFloat(u.balance).toFixed(4)} TON*`,
         { parse_mode: "Markdown" }
       );
+      // Notify user
+      try {
+        await bot.sendMessage(targetId,
+          `📉 تم خصم *${val} TON* من رصيدك.\nرصيدك الحالي: *${parseFloat(u.balance).toFixed(4)} TON*`,
+          { parse_mode: "Markdown" }
+        );
+      } catch { /* user may have blocked bot */ }
       return true;
     }
 
@@ -728,6 +742,13 @@ export async function handleAdminText(
         `✅ تم تعيين رصيد المستخدم ${targetId} إلى *${val} TON*`,
         { parse_mode: "Markdown" }
       );
+      // Notify user
+      try {
+        await bot.sendMessage(targetId,
+          `💰 تم تحديث رصيدك إلى *${val} TON*`,
+          { parse_mode: "Markdown" }
+        );
+      } catch { /* user may have blocked bot */ }
       return true;
     }
 
@@ -754,6 +775,15 @@ export async function handleAdminText(
         `✅ اللفات الجديدة للمستخدم ${targetId}: *${u.spins}*`,
         { parse_mode: "Markdown" }
       );
+      // Notify user
+      if (val > 0 || (isRelative && val > 0)) {
+        try {
+          await bot.sendMessage(targetId,
+            `🎰 تم إضافة *${Math.abs(val)} لفة* لحسابك!\nلفاتك الحالية: *${u.spins}*`,
+            { parse_mode: "Markdown" }
+          );
+        } catch { /* user may have blocked bot */ }
+      }
       return true;
     }
   } catch (err) {

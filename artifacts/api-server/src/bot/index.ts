@@ -458,9 +458,9 @@ async function processWithdrawal(
       await bot.sendMessage(wd.userId, userMsg);
     } catch { /* user may not be reachable */ }
 
-    // Fire-and-forget TON transfer if configured
+    // Fire-and-forget TON transfer if configured — pass admin chatId for completion notification
     if (action === "approved" && autoMode) {
-      executeAutoWithdrawal(wdId, wd.userId, wd.walletAddress, wd.amount).catch(() => {});
+      executeAutoWithdrawal(wdId, wd.userId, wd.walletAddress, wd.amount, chatId).catch(() => {});
     }
   } catch (err) {
     logger.error({ err }, "Error processing withdrawal");
