@@ -434,7 +434,7 @@ async function processWithdrawal(
     const statusText =
       action === "approved"
         ? autoMode
-          ? `⏳ جاري إرسال ${parseFloat(wd.amount).toFixed(4)} TON تلقائياً إلى:\n\`${wd.walletAddress}\``
+          ? `✅ تمت الموافقة — جاري إرسال ${parseFloat(wd.amount).toFixed(4)} TON`
           : `✅ تمت الموافقة على طلب السحب #${wdId}\nيرجى إرسال ${parseFloat(wd.amount).toFixed(4)} TON يدوياً إلى:\n\`${wd.walletAddress}\``
         : `❌ تم رفض طلب السحب #${wdId}\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON للمستخدم.`;
 
@@ -447,16 +447,15 @@ async function processWithdrawal(
       });
     } catch { /* ignore edit errors */ }
 
-    // Notify user
-    try {
-      const userMsg =
-        action === "approved"
-          ? autoMode
-            ? `⏳ تمت الموافقة! جاري إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك تلقائياً...`
-            : `✅ تمت الموافقة على سحبك!\n\nسيتم إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك قريباً.`
-          : `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`;
-      await bot.sendMessage(wd.userId, userMsg);
-    } catch { /* user may not be reachable */ }
+    // Notify user (only on rejection, on approval notify when transfer is complete)
+    if (action === "rejected") {
+      try {
+        await bot.sendMessage(
+          wd.userId,
+          `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`
+        );
+      } catch { /* user may not be reachable */ }
+    }
 
     // Fire-and-forget TON transfer if configured — pass admin chatId for completion notification
     if (action === "approved" && autoMode) {

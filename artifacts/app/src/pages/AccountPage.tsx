@@ -10,9 +10,10 @@ function isValidTonAddress(addr: string): boolean {
 }
 
 function statusBadge(status: string) {
+  if (status === "completed") return { label: "✅ ناجح", color: "#10b981", bg: "rgba(16,185,129,0.13)", border: "rgba(16,185,129,0.30)" };
   if (status === "approved") return { label: "تمت الموافقة", color: "#10b981", bg: "rgba(16,185,129,0.13)", border: "rgba(16,185,129,0.30)" };
-  if (status === "rejected") return { label: "مرفوض", color: "#f87171", bg: "rgba(248,113,113,0.13)", border: "rgba(248,113,113,0.30)" };
-  return { label: "قيد المراجعة", color: "#fbbf24", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.30)" };
+  if (status === "rejected") return { label: "❌ مرفوض", color: "#f87171", bg: "rgba(248,113,113,0.13)", border: "rgba(248,113,113,0.30)" };
+  return { label: "⏳ قيد المراجعة", color: "#fbbf24", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.30)" };
 }
 
 function formatDate(iso: string) {

@@ -40,9 +40,10 @@ export async function executeAutoWithdrawal(
       try {
         await bot.sendMessage(
           userId,
-          `✅ تم إرسال ${parseFloat(amount).toFixed(4)} TON إلى محفظتك!\n\n` +
-          `📍 المحفظة: \`${walletAddress}\`\n` +
-          `🔑 مرجع: \`${result.txRef}\``,
+          `✅ تم إرسال ${parseFloat(amount).toFixed(4)} TON بنجاح!\n\n` +
+          `💲 المبلغ: ${parseFloat(amount).toFixed(4)} TON\n` +
+          `👛 العنوان: \`${walletAddress}\`\n` +
+          `🔗 المرجع: \`${result.txRef}\``,
           { parse_mode: "Markdown" }
         );
       } catch { /* ignore */ }
@@ -52,9 +53,10 @@ export async function executeAutoWithdrawal(
         try {
           await bot.sendMessage(
             adminChatId,
-            `✅ تم إرسال *${parseFloat(amount).toFixed(4)} TON* بنجاح!\n` +
-            `📍 \`${walletAddress}\`\n` +
-            `🔑 \`${result.txRef}\``,
+            `✅ تم إرسال *${parseFloat(amount).toFixed(4)} TON* بنجاح!\n\n` +
+            `💲 المبلغ: *${parseFloat(amount).toFixed(4)} TON*\n` +
+            `👛 العنوان: \`${walletAddress}\`\n` +
+            `🔗 المرجع: \`${result.txRef}\``,
             { parse_mode: "Markdown" }
           );
         } catch { /* ignore */ }
