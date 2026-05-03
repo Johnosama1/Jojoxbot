@@ -6,7 +6,7 @@ import { Users, Copy, CheckCheck, Zap, Gift, Share2, Link2 } from "lucide-react"
 export default function ReferralPage() {
   const { user } = useUser();
   const [copied, setCopied] = useState(false);
-  const [botUsername, setBotUsername] = useState("jojoxbot");
+  const [botUsername, setBotUsername] = useState("Jojox1bot");
 
   useEffect(() => {
     api.getConfig().then((c) => setBotUsername(c.botUsername)).catch(() => {});
