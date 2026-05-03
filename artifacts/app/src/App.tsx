@@ -1,13 +1,15 @@
+import { lazy, Suspense } from "react";
 import { useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UserProvider, useUser } from "./lib/userContext";
 import TabBar from "./components/TabBar";
 import AnimatedBackground from "./components/AnimatedBackground";
 import HomePage from "./pages/HomePage";
-import TasksPage from "./pages/TasksPage";
-import ReferralPage from "./pages/ReferralPage";
-import AccountPage from "./pages/AccountPage";
-import AdminPage from "./pages/AdminPage";
+
+const TasksPage    = lazy(() => import("./pages/TasksPage"));
+const ReferralPage = lazy(() => import("./pages/ReferralPage"));
+const AccountPage  = lazy(() => import("./pages/AccountPage"));
+const AdminPage    = lazy(() => import("./pages/AdminPage"));
 
 const queryClient = new QueryClient();
 
@@ -36,25 +38,31 @@ function BannedScreen() {
   );
 }
 
+const PageFallback = () => (
+  <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }} />
+);
+
 const ROUTES = [
-  { path: "/", Component: HomePage },
-  { path: "/tasks", Component: TasksPage },
-  { path: "/referral", Component: ReferralPage },
-  { path: "/account", Component: AccountPage },
-  { path: "/admin", Component: AdminPage },
-];
+  { path: "/",         Component: HomePage,    lazy: false },
+  { path: "/tasks",    Component: TasksPage,   lazy: true  },
+  { path: "/referral", Component: ReferralPage, lazy: true },
+  { path: "/account",  Component: AccountPage, lazy: true  },
+  { path: "/admin",    Component: AdminPage,   lazy: true  },
+] as const;
 
 function PersistentRouter() {
   const [location] = useLocation();
   const { banned } = useUser();
   if (banned) return <BannedScreen />;
+
   return (
     <>
-      {ROUTES.map(({ path, Component }) => {
+      {ROUTES.map(({ path, Component, lazy: isLazy }) => {
         const isActive =
           path === "/"
             ? location === "/" || location === ""
             : location === path || location.startsWith(path + "/");
+
         return (
           <div
             key={path}
@@ -65,7 +73,13 @@ function PersistentRouter() {
               overflow: "hidden",
             }}
           >
-            <Component />
+            {isLazy ? (
+              <Suspense fallback={<PageFallback />}>
+                <Component />
+              </Suspense>
+            ) : (
+              <Component />
+            )}
           </div>
         );
       })}

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import bgImage from "/bg.jpg";
+
+const bgImage = "/bg.jpg";
 
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
