@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getBot, sendWelcomeMessage } from "../bot/index";
 import { logger } from "../lib/logger";
 
@@ -189,39 +189,7 @@ router.post("/verify", async (req, res) => {
   const userAgent = ((req.headers["user-agent"] as string) || "").slice(0, 500);
   const ipHash = rawIp ? hashIp(rawIp) : null;
 
-  // Check for duplicate IP across active accounts
-  if (ipHash) {
-    const [duplicate] = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(
-        and(
-          eq(usersTable.ipHash, ipHash),
-          ne(usersTable.id, uid),
-          eq(usersTable.isVisible, true),
-        ),
-      )
-      .limit(1);
-
-    if (duplicate) {
-      await db
-        .update(usersTable)
-        .set({ isVisible: false })
-        .where(eq(usersTable.id, uid));
-
-      logger.warn({ userId: uid, duplicateOf: duplicate.id }, "Duplicate IP — account banned");
-
-      try {
-        const bot = getBot();
-        if (bot) {
-          await bot.sendMessage(uid, "🚫 تم حظر حسابك بسبب اكتشاف حساب مكرر (نفس عنوان IP).");
-        }
-      } catch { /* user may have blocked the bot */ }
-
-      res.send(errorHtml("تم اكتشاف حساب مكرر باستخدام نفس عنوان الشبكة. تم حظر الحساب الجديد تلقائياً."));
-      return;
-    }
-  }
+  // IP is tracked for informational purposes only — no auto-ban on IP alone
 
   // All checks passed — mark user verified
   await db

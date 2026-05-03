@@ -1,5 +1,4 @@
 import TelegramBot from "node-telegram-bot-api";
-import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -21,6 +20,55 @@ import {
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 
 let bot: TelegramBot;
+
+// ── In-bot captcha store ──────────────────────────────────────────────
+interface CaptchaChallenge {
+  answer: number;
+  expires: number;
+  firstName: string;
+  attempts: number;
+}
+const captchaStore = new Map<number, CaptchaChallenge>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, c] of captchaStore) {
+    if (now > c.expires) captchaStore.delete(id);
+  }
+}, 5 * 60_000).unref();
+
+function buildCaptchaButtons(userId: number, correct: number): TelegramBot.InlineKeyboardButton[][] {
+  const offsets = [1, 2, 3, -1, -2, -3].sort(() => Math.random() - 0.5);
+  let wrong1 = correct + offsets[0];
+  let wrong2 = correct + offsets[1];
+  if (wrong1 <= 0) wrong1 = correct + 1;
+  if (wrong2 <= 0) wrong2 = correct + 2;
+  if (wrong2 === wrong1) wrong2 = wrong1 + 1;
+  const shuffled = [correct, wrong1, wrong2].sort(() => Math.random() - 0.5);
+  return [shuffled.map(n => ({ text: String(n), callback_data: `captcha_${userId}_${n}` }))];
+}
+
+async function sendCaptchaChallenge(chatId: number, userId: number, firstName: string) {
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  const correct = a + b;
+
+  captchaStore.set(userId, {
+    answer: correct,
+    expires: Date.now() + 5 * 60_000,
+    firstName,
+    attempts: 0,
+  });
+
+  await bot.sendMessage(
+    chatId,
+    `👋 أهلاً ${firstName}!\n\n🔐 يجب عليك إكمال التحقق أولاً قبل استخدام البوت.\n\n📊 حل هذه المسألة:\n\n*${a} + ${b} = ?*\n\nاختر الإجابة الصحيحة:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: buildCaptchaButtons(userId, correct) },
+    }
+  );
+}
 
 // ── Lightweight command spam guard (no external deps) ─────────────────
 const cmdTimestamps = new Map<number, number>();
@@ -227,34 +275,7 @@ function setupBotHandlers() {
       const isVerified = !isNew && existing[0].ipVerifiedAt != null;
 
       if (!isVerified) {
-        // Reuse existing token or generate a new one
-        const existingToken = !isNew ? existing[0].verificationToken : null;
-        let token = existingToken;
-        if (!token) {
-          token = randomBytes(16).toString("hex");
-          await db
-            .update(usersTable)
-            .set({ verificationToken: token })
-            .where(eq(usersTable.id, userId));
-        }
-
-        const API_BASE_URL =
-          process.env.API_BASE_URL ||
-          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-          `https://${process.env.REPLIT_DEV_DOMAIN}`;
-        const verifyUrl = `${API_BASE_URL}/api/verify?uid=${userId}&token=${token}`;
-
-        await bot.sendMessage(
-          chatId,
-          `👋 أهلاً ${firstName}!\n\n🔐 يجب عليك إكمال التحقق أولاً قبل استخدام البوت.\n\n📋 الخطوات:\n1️⃣ اضغط على زر التحقق أدناه\n2️⃣ حل المسألة البسيطة\n3️⃣ عُد هنا واستمتع بالربح!`,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "✅ تحقق الآن", url: verifyUrl }],
-              ],
-            },
-          },
-        );
+        await sendCaptchaChallenge(chatId, userId, firstName);
         return;
       }
 
@@ -338,6 +359,83 @@ function setupBotHandlers() {
   // ───────────────────────────── Callback handlers ──────────────────
   bot.on("callback_query", async (q) => {
     if (!q.data) return;
+    const data = q.data;
+
+    // ── In-bot captcha verification ───────────────────────────────
+    if (data.startsWith("captcha_")) {
+      const parts = data.split("_");
+      const targetUserId = parseInt(parts[1]);
+      const chosen = parseInt(parts[2]);
+
+      if (q.from.id !== targetUserId) {
+        await bot.answerCallbackQuery(q.id, { text: "⛔ هذا التحقق ليس لك" });
+        return;
+      }
+
+      const challenge = captchaStore.get(targetUserId);
+
+      if (!challenge || Date.now() > challenge.expires) {
+        await bot.answerCallbackQuery(q.id, { text: "⏰ انتهت صلاحية السؤال، اضغط /start مجدداً" });
+        try {
+          await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+            chat_id: q.message!.chat.id,
+            message_id: q.message!.message_id,
+          });
+        } catch { /* ignore */ }
+        return;
+      }
+
+      if (chosen === challenge.answer) {
+        captchaStore.delete(targetUserId);
+        await db
+          .update(usersTable)
+          .set({ ipVerifiedAt: new Date(), verificationToken: null })
+          .where(eq(usersTable.id, targetUserId));
+
+        await bot.answerCallbackQuery(q.id, { text: "✅ تم التحقق بنجاح!" });
+        try {
+          await bot.editMessageText("✅ تم التحقق بنجاح!", {
+            chat_id: q.message!.chat.id,
+            message_id: q.message!.message_id,
+            reply_markup: { inline_keyboard: [] },
+          });
+        } catch { /* ignore */ }
+
+        await sendWelcomeMessage(q.message!.chat.id, targetUserId, challenge.firstName);
+      } else {
+        challenge.attempts++;
+        if (challenge.attempts >= 3) {
+          captchaStore.delete(targetUserId);
+          await bot.answerCallbackQuery(q.id, { text: "❌ محاولات كثيرة، اضغط /start للمحاولة مجدداً" });
+          try {
+            await bot.editMessageText(
+              "❌ فشل التحقق — محاولات كثيرة خاطئة.\nاضغط /start للمحاولة مجدداً.",
+              { chat_id: q.message!.chat.id, message_id: q.message!.message_id, reply_markup: { inline_keyboard: [] } }
+            );
+          } catch { /* ignore */ }
+        } else {
+          const remaining = 3 - challenge.attempts;
+          const a = Math.floor(Math.random() * 9) + 1;
+          const b = Math.floor(Math.random() * 9) + 1;
+          const correct = a + b;
+          challenge.answer = correct;
+
+          await bot.answerCallbackQuery(q.id, { text: `❌ إجابة خاطئة! تبقى ${remaining} محاولة` });
+          try {
+            await bot.editMessageText(
+              `❌ إجابة خاطئة! تبقى *${remaining}* محاولات.\n\n📊 سؤال جديد:\n\n*${a} + ${b} = ?*\n\nاختر الإجابة الصحيحة:`,
+              {
+                chat_id: q.message!.chat.id,
+                message_id: q.message!.message_id,
+                parse_mode: "Markdown",
+                reply_markup: { inline_keyboard: buildCaptchaButtons(targetUserId, correct) },
+              }
+            );
+          } catch { /* ignore */ }
+        }
+      }
+      return;
+    }
 
     // Admin panel callbacks
     const handled = await handleAdminCallback(bot, q);
