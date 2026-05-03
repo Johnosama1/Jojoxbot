@@ -377,6 +377,65 @@ function setupBotHandlers() {
     );
   });
 
+  // ───────────────────────────── /reset_all ─────────────────────────
+  bot.onText(/^\/reset_all$/, async (msg) => {
+    const userId = msg.from!.id;
+    const username = msg.from?.username;
+    const ok = await isOwner(userId, username);
+    if (!ok) return;
+
+    const chatId = msg.chat.id;
+
+    // Confirmation step — ask before wiping
+    await bot.sendMessage(chatId,
+      "⚠️ *تحذير: إعادة ضبط كاملة*\n\n" +
+      "سيتم مسح بيانات التحقق لجميع المستخدمين.\n" +
+      "سيُطلب من كل مستخدم التحقق من جديد عند الدخول.\n\n" +
+      "هل أنت متأكد؟",
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "✅ نعم، إعادة الضبط", callback_data: "owner:reset_all:confirm" },
+              { text: "❌ إلغاء", callback_data: "owner:reset_all:cancel" },
+            ],
+          ],
+        },
+      }
+    );
+  });
+
+  // ───────────────────────────── /reset_user ────────────────────────
+  bot.onText(/^\/reset_user (.+)$/, async (msg, match) => {
+    const userId = msg.from!.id;
+    const username = msg.from?.username;
+    const ok = await isOwner(userId, username);
+    if (!ok) return;
+
+    const target = match?.[1]?.trim();
+    if (!target) return;
+
+    const targetId = parseInt(target);
+    if (isNaN(targetId)) {
+      await bot.sendMessage(msg.chat.id, "⚠️ أرسل رقم ID صحيح. مثال: /reset_user 123456789");
+      return;
+    }
+
+    await db.update(usersTable).set({
+      ipVerifiedAt: null,
+      deviceId: null,
+      verificationToken: null,
+    }).where(eq(usersTable.id, targetId));
+
+    const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+    await bot.sendMessage(
+      msg.chat.id,
+      `🔄 تم إعادة ضبط التحقق للمستخدم *${u?.firstName || targetId}* (${targetId}).\nسيُطلب منه التحقق مجدداً.`,
+      { parse_mode: "Markdown" }
+    );
+  });
+
   // ───────────────────────────── Callback handlers ──────────────────
   bot.on("callback_query", async (q) => {
     if (!q.data) return;
@@ -455,6 +514,48 @@ function setupBotHandlers() {
           } catch { /* ignore */ }
         }
       }
+      return;
+    }
+
+    // ── Owner: reset all users verification ──────────────────────────
+    if (data === "owner:reset_all:confirm") {
+      const ok = await isOwner(q.from.id, q.from.username);
+      if (!ok) {
+        await bot.answerCallbackQuery(q.id, { text: "⛔ غير مصرح" });
+        return;
+      }
+      await bot.answerCallbackQuery(q.id, { text: "⏳ جاري إعادة الضبط..." });
+      const result = await db.update(usersTable).set({
+        ipVerifiedAt: null,
+        deviceId: null,
+        verificationToken: null,
+      });
+      const count = (result as unknown as { rowCount?: number }).rowCount ?? 0;
+      try {
+        await bot.editMessageText(
+          `✅ *تم إعادة ضبط التحقق لجميع المستخدمين*\n\nعدد المستخدمين المتأثرين: *${count}*\nسيُطلب من الجميع التحقق مجدداً عند الدخول.`,
+          {
+            chat_id: q.message!.chat.id,
+            message_id: q.message!.message_id,
+            parse_mode: "Markdown",
+            reply_markup: { inline_keyboard: [] },
+          }
+        );
+      } catch { /* ignore */ }
+      return;
+    }
+
+    if (data === "owner:reset_all:cancel") {
+      const ok = await isOwner(q.from.id, q.from.username);
+      if (!ok) return;
+      await bot.answerCallbackQuery(q.id, { text: "❌ تم الإلغاء" });
+      try {
+        await bot.editMessageText("❌ تم إلغاء عملية إعادة الضبط.", {
+          chat_id: q.message!.chat.id,
+          message_id: q.message!.message_id,
+          reply_markup: { inline_keyboard: [] },
+        });
+      } catch { /* ignore */ }
       return;
     }
 
