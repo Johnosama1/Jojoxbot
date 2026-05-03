@@ -35,6 +35,10 @@ export async function executeAutoWithdrawal(
       })
       .where(eq(withdrawalsTable.id, withdrawalId));
 
+    // Get the withdrawal record to fetch estimated fee
+    const [wd] = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.id, withdrawalId)).limit(1);
+    const estimatedFee = wd?.fee ? parseFloat(wd.fee).toFixed(4) : "0.05";
+
     if (bot) {
       // Notify user
       try {
@@ -54,7 +58,8 @@ export async function executeAutoWithdrawal(
           await bot.sendMessage(
             adminChatId,
             `✅ تم إرسال *${parseFloat(amount).toFixed(4)} TON* بنجاح!\n\n` +
-            `💲 المبلغ: *${parseFloat(amount).toFixed(4)} TON*\n` +
+            `💲 المبلغ للمستخدم: *${parseFloat(amount).toFixed(4)} TON*\n` +
+            `⚡ الرسم المخصوم منك: *${estimatedFee} TON*\n` +
             `👛 العنوان: \`${walletAddress}\`\n` +
             `🔗 المرجع: \`${result.txRef}\``,
             { parse_mode: "Markdown" }

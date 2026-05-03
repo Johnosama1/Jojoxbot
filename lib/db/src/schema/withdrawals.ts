@@ -7,6 +7,7 @@ export const withdrawalsTable = pgTable("withdrawals", {
   userId: bigint("user_id", { mode: "number" }).notNull(),
   amount: numeric("amount", { precision: 18, scale: 6 }).notNull(),
   walletAddress: text("wallet_address").notNull(),
+  fee: numeric("fee", { precision: 18, scale: 6 }).default("0.05"), // Estimated TON network fee
   status: text("status").notNull().default("pending"),
   txHash: text("tx_hash"),
   errorMsg: text("error_msg"),
