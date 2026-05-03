@@ -143,7 +143,7 @@ export function initBot() {
       const MINI_APP_URL =
         process.env.MINI_APP_URL ||
         `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
-      const BOT_USERNAME = process.env.BOT_USERNAME || "jojoxbot";
+      const BOT_USERNAME = process.env.BOT_USERNAME || "Jojox1bot";
 
       // Returns the number of UTF-16 code units in a string (Telegram uses UTF-16 offsets)
       const utf16Len = (s: string): number => {
@@ -203,7 +203,7 @@ export function initBot() {
         entities: welcomeEntities as any,
         reply_markup: {
           inline_keyboard: [
-            [{ text: "🎁 Open now", web_app: { url: MINI_APP_URL } }],
+            [{ text: "🎁 Open now", web_app: { url: `${MINI_APP_URL}?uid=${userId}` } }],
           ],
         },
       });
