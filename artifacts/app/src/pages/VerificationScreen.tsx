@@ -53,7 +53,13 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
       const deviceId = await collectDeviceFingerprint();
       await api.verifyDevice(deviceId);
       setStatus("idle");
-      onVerified();
+      // Close the mini app so the bot welcome message appears
+      const tg = (window as unknown as { Telegram?: { WebApp?: { close(): void } } }).Telegram?.WebApp;
+      if (tg) {
+        tg.close();
+      } else {
+        onVerified();
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "خطأ غير متوقع";
       if (msg === "محظور") {

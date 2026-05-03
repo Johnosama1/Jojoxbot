@@ -279,18 +279,24 @@ function setupBotHandlers() {
           process.env.MINI_APP_URL ||
           `https://${process.env.REPLIT_DEV_DOMAIN}:3000/app/`;
 
-        await bot.sendMessage(
-          chatId,
-          `👋 أهلاً ${firstName}!\n\n🎰 مرحباً بك في *Jo-jokes* — أسرع بوت ربح TON!\n\n🔐 خطوة واحدة للبدء:\nافتح التطبيق وأكمل التحقق السريع للحصول على وصول كامل.`,
-          {
-            parse_mode: "Markdown",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "🔐 ابدأ التحقق والدخول", web_app: { url: MINI_APP_URL } }],
-              ],
-            },
-          }
-        );
+        const { text: verifyText, entities: verifyEntities } = buildMsg([
+          { text: "👋", emojiId: "5339536521009571338" },
+          { text: ` أهلاً ${firstName}!\n\n` },
+          { text: "🎰", emojiId: "5102856631562011824" },
+          { text: " مرحباً بك في Jo-jokes — أسرع بوت ربح TON!\n\n" },
+          { text: "🔐", emojiId: "5197288647275071607" },
+          { text: " خطوة واحدة للبدء:\n" },
+          { text: "افتح التطبيق وأكمل التحقق السريع للحصول على وصول كامل." },
+        ]);
+
+        await bot.sendMessage(chatId, verifyText, {
+          entities: verifyEntities as any,
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "🔐 ابدأ التحقق والدخول", web_app: { url: MINI_APP_URL } }],
+            ],
+          },
+        });
         return;
       }
 
