@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../lib/api";
 
 async function collectDeviceFingerprint(): Promise<string> {
@@ -36,15 +36,45 @@ async function collectDeviceFingerprint(): Promise<string> {
     .join("");
 }
 
+function closeMiniApp() {
+  const tg = (window as unknown as { Telegram?: { WebApp?: { close(): void } } }).Telegram?.WebApp;
+  if (tg) tg.close();
+}
+
 interface Props {
   firstName: string;
   onVerified: () => void;
   onBanned: () => void;
 }
 
+type Status = "idle" | "loading" | "success" | "banned" | "error";
+
 export default function VerificationScreen({ firstName, onVerified, onBanned }: Props) {
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [countdown, setCountdown] = useState(3);
+
+  useEffect(() => {
+    if (status === "banned" || status === "success") {
+      const interval = setInterval(() => {
+        setCountdown(c => {
+          if (c <= 1) {
+            clearInterval(interval);
+            if (status === "banned") {
+              closeMiniApp();
+              onBanned();
+            } else {
+              closeMiniApp();
+              onVerified();
+            }
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [status]);
 
   const handleVerify = async () => {
     setStatus("loading");
@@ -52,24 +82,111 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
     try {
       const deviceId = await collectDeviceFingerprint();
       await api.verifyDevice(deviceId);
-      setStatus("idle");
-      // Close the mini app so the bot welcome message appears
-      const tg = (window as unknown as { Telegram?: { WebApp?: { close(): void } } }).Telegram?.WebApp;
-      if (tg) {
-        tg.close();
-      } else {
-        onVerified();
-      }
+      setCountdown(3);
+      setStatus("success");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "خطأ غير متوقع";
       if (msg === "محظور") {
-        onBanned();
+        setCountdown(3);
+        setStatus("banned");
         return;
       }
       setErrorMsg(msg);
       setStatus("error");
     }
   };
+
+  if (status === "success") {
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        background: "linear-gradient(160deg, #031a0a 0%, #041f0c 100%)",
+        padding: "32px 24px",
+      }}>
+        <div style={{
+          background: "rgba(10,40,20,0.97)",
+          border: "1px solid rgba(34,197,94,0.4)",
+          borderRadius: 24,
+          padding: "40px 28px",
+          maxWidth: 340,
+          width: "100%",
+          textAlign: "center",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(34,197,94,0.1)",
+        }}>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>✅</div>
+          <h2 style={{ color: "#22c55e", fontSize: 22, fontWeight: 900, margin: "0 0 12px" }}>
+            تم فحص الجهاز بنجاح!
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, lineHeight: 1.8, margin: "0 0 20px" }}>
+            مرحباً بك في Jo-jokes 🎰<br />
+            يمكنك الآن الدخول إلى التطبيق وبدء الربح.
+          </p>
+          <div style={{
+            background: "rgba(34,197,94,0.1)",
+            border: "1px solid rgba(34,197,94,0.2)",
+            borderRadius: 12,
+            padding: "12px",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 13,
+          }}>
+            🔄 سيتم إغلاق النافذة خلال {countdown} ثوانٍ...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "banned") {
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        background: "linear-gradient(160deg, #1a0303 0%, #1f0404 100%)",
+        padding: "32px 24px",
+      }}>
+        <div style={{
+          background: "rgba(40,5,5,0.97)",
+          border: "1px solid rgba(239,68,68,0.4)",
+          borderRadius: 24,
+          padding: "40px 28px",
+          maxWidth: 340,
+          width: "100%",
+          textAlign: "center",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(239,68,68,0.1)",
+        }}>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>🚫</div>
+          <h2 style={{ color: "#ef4444", fontSize: 20, fontWeight: 900, margin: "0 0 12px" }}>
+            تم اكتشاف تعدد الحسابات
+          </h2>
+          <div style={{
+            background: "rgba(239,68,68,0.1)",
+            border: "1px solid rgba(239,68,68,0.25)",
+            borderRadius: 14,
+            padding: "16px 18px",
+            marginBottom: 20,
+            textAlign: "right",
+          }}>
+            <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, lineHeight: 1.8, margin: 0 }}>
+              🔴 تم رصد استخدام هذا الجهاز مع حساب آخر.<br />
+              🚫 تم حظر هذا الحساب تلقائياً.<br />
+              ℹ️ كل جهاز يسمح بحساب واحد فقط.
+            </p>
+          </div>
+          <div style={{
+            background: "rgba(239,68,68,0.08)",
+            border: "1px solid rgba(239,68,68,0.15)",
+            borderRadius: 12,
+            padding: "12px",
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 13,
+          }}>
+            🔄 سيتم إغلاق النافذة خلال {countdown} ثوانٍ...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -90,20 +207,13 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
       }}>
         <div style={{ fontSize: 64, marginBottom: 16 }}>🎰</div>
 
-        <h2 style={{
-          color: "#fff",
-          fontSize: 22,
-          fontWeight: 800,
-          margin: "0 0 10px",
-        }}>
+        <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>
           مرحباً {firstName}!
         </h2>
 
         <p style={{
-          color: "rgba(255,255,255,0.6)",
-          fontSize: 14,
-          lineHeight: 1.8,
-          margin: "0 0 28px",
+          color: "rgba(255,255,255,0.6)", fontSize: 14,
+          lineHeight: 1.8, margin: "0 0 24px",
         }}>
           خطوة سريعة للتحقق من حسابك<br />
           وضمان أمان منصة Jo-jokes.
@@ -112,10 +222,8 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
         <div style={{
           background: "rgba(124,110,255,0.08)",
           border: "1px solid rgba(124,110,255,0.2)",
-          borderRadius: 14,
-          padding: "16px 20px",
-          marginBottom: 24,
-          textAlign: "right",
+          borderRadius: 14, padding: "16px 20px",
+          marginBottom: 24, textAlign: "right",
         }}>
           {[
             { icon: "✅", text: "حساب واحد لكل جهاز" },
@@ -126,8 +234,7 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
               display: "flex", alignItems: "center", gap: 10,
               marginBottom: 8, fontSize: 13, color: "rgba(255,255,255,0.75)",
             }}>
-              <span>{icon}</span>
-              <span>{text}</span>
+              <span>{icon}</span><span>{text}</span>
             </div>
           ))}
         </div>
@@ -136,11 +243,8 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           <div style={{
             background: "rgba(255,100,100,0.1)",
             border: "1px solid rgba(255,100,100,0.3)",
-            borderRadius: 10,
-            padding: "10px 14px",
-            marginBottom: 16,
-            color: "#ff8080",
-            fontSize: 13,
+            borderRadius: 10, padding: "10px 14px",
+            marginBottom: 16, color: "#ff8080", fontSize: 13,
           }}>
             ⚠️ {errorMsg}
           </div>
@@ -150,19 +254,14 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           onClick={handleVerify}
           disabled={status === "loading"}
           style={{
-            width: "100%",
-            padding: "15px 20px",
+            width: "100%", padding: "15px 20px",
             background: status === "loading"
               ? "rgba(124,110,255,0.4)"
               : "linear-gradient(135deg,#7c6eff,#5a4ee0)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 14,
-            fontSize: 16,
-            fontWeight: 700,
+            color: "#fff", border: "none", borderRadius: 14,
+            fontSize: 16, fontWeight: 700,
             cursor: status === "loading" ? "not-allowed" : "pointer",
-            transition: "opacity 0.2s",
-            letterSpacing: 0.3,
+            transition: "opacity 0.2s", letterSpacing: 0.3,
           }}
         >
           {status === "loading" ? "⏳ جاري التحقق..." : "🔐 تحقق والدخول الآن"}

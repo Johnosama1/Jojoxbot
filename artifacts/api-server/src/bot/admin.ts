@@ -213,6 +213,7 @@ function showUserCard(
           banned
             ? { text: "✅ رفع الحظر", callback_data: `adm:u:unban:${u.id}` }
             : { text: "🚫 حظر المستخدم", callback_data: `adm:u:ban:${u.id}` },
+          { text: "🔄 إعادة التحقق", callback_data: `adm:u:resetv:${u.id}` },
         ],
         [{ text: "◀️ رجوع للمستخدمين", callback_data: "adm:users" }],
       ],
@@ -494,6 +495,24 @@ export async function handleAdminCallback(
       const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
       await bot.sendMessage(chatId, `✅ تم رفع الحظر عن المستخدم ${u?.firstName || targetId} (${targetId}).`,
         { });
+    }
+
+    else if (sec === "u" && act === "resetv" && p1) {
+      const targetId = parseInt(p1);
+      await db.update(usersTable).set({
+        ipVerifiedAt: null,
+        deviceId: null,
+        verificationToken: null,
+      }).where(eq(usersTable.id, targetId));
+      try {
+        await bot.answerCallbackQuery(callbackId, { text: "🔄 تم إعادة التحقق" });
+      } catch { /* ignore */ }
+      const [u] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+      await bot.sendMessage(
+        chatId,
+        `🔄 تم إعادة ضبط التحقق للمستخدم ${u?.firstName || targetId} (${targetId}).\nسيُطلب منه التحقق مجدداً عند الدخول.`,
+        { }
+      );
     }
 
     // ── Withdrawals ──

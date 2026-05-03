@@ -303,10 +303,14 @@ router.post("/verify-device", telegramAuth, async (req, res) => {
     })
     .where(eq(usersTable.id, userId));
 
-  // Notify via bot that verification succeeded
+  // Notify via bot — success confirmation then full welcome
   try {
     const bot = getBot();
     if (bot) {
+      await bot.sendMessage(
+        userId,
+        "✅ تم فحص الجهاز بنجاح!\nيمكنك الآن الدخول إلى التطبيق وبدء الربح 🎉"
+      );
       await sendWelcomeMessage(userId, userId, user.firstName || "");
     }
   } catch { /* ignore */ }
