@@ -5,6 +5,7 @@ import { withdrawalsTable, usersTable } from "@workspace/db/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { sendWithdrawalNotification } from "../bot";
 import { getSetting } from "../lib/settingsCache";
+import { executeAutoWithdrawal, isTonConfigured } from "../lib/withdrawalProcessor";
 
 const router = Router();
 
@@ -64,7 +65,9 @@ router.post("/", withdrawLimiter, async (req, res) => {
     getSetting("withdraw_mode"),
     getSetting("owner_telegram_id"),
   ]);
-  const initialStatus = mode === "auto" ? "approved" : "pending";
+
+  const isAuto = mode === "auto" && isTonConfigured();
+  const initialStatus = isAuto ? "approved" : "pending";
 
   const [withdrawal] = await db.insert(withdrawalsTable).values({
     userId: numUserId,
@@ -73,19 +76,24 @@ router.post("/", withdrawLimiter, async (req, res) => {
     status: initialStatus,
   }).returning();
 
-  // Notify owner (fire-and-forget)
-  try {
-    if (ownerIdStr) {
-      const ownerId = parseInt(ownerIdStr);
-      sendWithdrawalNotification(
-        ownerId,
-        { firstName: user.firstName || "", username: user.username, id: numUserId },
-        amt.toString(),
-        cleanAddress,
-        withdrawal.id,
-      ).catch(() => {});
-    }
-  } catch { /* ignore */ }
+  if (isAuto) {
+    // Fire-and-forget TON transfer
+    executeAutoWithdrawal(withdrawal.id, numUserId, cleanAddress, amt.toString()).catch(() => {});
+  } else {
+    // Notify owner for manual approval
+    try {
+      if (ownerIdStr) {
+        const ownerId = parseInt(ownerIdStr);
+        sendWithdrawalNotification(
+          ownerId,
+          { firstName: user.firstName || "", username: user.username, id: numUserId },
+          amt.toString(),
+          cleanAddress,
+          withdrawal.id,
+        ).catch(() => {});
+      }
+    } catch { /* ignore */ }
+  }
 
   res.json(withdrawal);
 });

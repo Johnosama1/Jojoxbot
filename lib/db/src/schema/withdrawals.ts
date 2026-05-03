@@ -8,6 +8,8 @@ export const withdrawalsTable = pgTable("withdrawals", {
   amount: numeric("amount", { precision: 18, scale: 6 }).notNull(),
   walletAddress: text("wallet_address").notNull(),
   status: text("status").notNull().default("pending"),
+  txHash: text("tx_hash"),
+  errorMsg: text("error_msg"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   processedAt: timestamp("processed_at"),
 });

@@ -8,6 +8,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { executeAutoWithdrawal, isTonConfigured } from "../lib/withdrawalProcessor";
 import {
   OWNER_USERNAME,
   isOwner,
@@ -397,31 +398,37 @@ async function processWithdrawal(
       return;
     }
 
-    await db
-      .update(withdrawalsTable)
-      .set({ status: action })
-      .where(eq(withdrawalsTable.id, wdId));
-
     if (action === "rejected") {
-      await db
-        .update(usersTable)
+      await db.update(withdrawalsTable)
+        .set({ status: "rejected" })
+        .where(eq(withdrawalsTable.id, wdId));
+      await db.update(usersTable)
         .set({ balance: sql`balance + ${wd.amount}` })
         .where(eq(usersTable.id, wd.userId));
+    } else {
+      // approved — mark and trigger TON transfer
+      await db.update(withdrawalsTable)
+        .set({ status: "approved" })
+        .where(eq(withdrawalsTable.id, wdId));
     }
 
     await bot.answerCallbackQuery(callbackId, {
-      text: action === "approved" ? "✅ تمت الموافقة" : "❌ تم الرفض",
+      text: action === "approved" ? "✅ تمت الموافقة — جاري الإرسال..." : "❌ تم الرفض",
     });
 
+    const autoMode = isTonConfigured();
     const statusText =
       action === "approved"
-        ? `✅ تمت الموافقة على طلب السحب #${wdId}\nيرجى إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى:\n${wd.walletAddress}`
+        ? autoMode
+          ? `⏳ جاري إرسال ${parseFloat(wd.amount).toFixed(4)} TON تلقائياً إلى:\n\`${wd.walletAddress}\``
+          : `✅ تمت الموافقة على طلب السحب #${wdId}\nيرجى إرسال ${parseFloat(wd.amount).toFixed(4)} TON يدوياً إلى:\n\`${wd.walletAddress}\``
         : `❌ تم رفض طلب السحب #${wdId}\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON للمستخدم.`;
 
     try {
       await bot.editMessageText(statusText, {
         chat_id: chatId,
         message_id: msgId,
+        parse_mode: "Markdown",
         reply_markup: { inline_keyboard: [] },
       });
     } catch { /* ignore edit errors */ }
@@ -430,10 +437,17 @@ async function processWithdrawal(
     try {
       const userMsg =
         action === "approved"
-          ? `✅ تمت الموافقة على سحبك!\n\nسيتم إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك قريباً.`
+          ? autoMode
+            ? `⏳ تمت الموافقة! جاري إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك تلقائياً...`
+            : `✅ تمت الموافقة على سحبك!\n\nسيتم إرسال ${parseFloat(wd.amount).toFixed(4)} TON إلى محفظتك قريباً.`
           : `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`;
-      await bot.sendMessage(wd.userId, userMsg, { });
+      await bot.sendMessage(wd.userId, userMsg);
     } catch { /* user may not be reachable */ }
+
+    // Fire-and-forget TON transfer if configured
+    if (action === "approved" && autoMode) {
+      executeAutoWithdrawal(wdId, wd.userId, wd.walletAddress, wd.amount).catch(() => {});
+    }
   } catch (err) {
     logger.error({ err }, "Error processing withdrawal");
     await bot.answerCallbackQuery(callbackId, { text: "❌ خطأ في المعالجة" });
