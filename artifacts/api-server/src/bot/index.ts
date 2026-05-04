@@ -135,7 +135,7 @@ export async function sendWelcomeMessage(chatId: number, userId: number, firstNa
     { text: " أكمل المهام " },
     { text: "⬅️", emojiId: "6131729520631223468" },
     { text: " لفة لكل " },
-    { text: "7️⃣" },
+    { text: "5️⃣", emojiId: "6203785577070858514" },
     { text: " مهام\n\n" },
     { text: "👥", emojiId: "6204118338252049831" },
     { text: " ادعُ أصدقاءك " },
