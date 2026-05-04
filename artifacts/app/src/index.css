@@ -60,11 +60,13 @@
     -moz-user-select: none;
     user-select: none;
   }
-  /* Allow selection only inside actual text inputs */
+  /* Allow selection and clipboard ops inside actual text inputs */
   input, textarea {
     -webkit-user-select: text;
     -moz-user-select: text;
     user-select: text;
+    -webkit-touch-callout: default;
+    touch-action: manipulation;
   }
   html, body {
     height: 100%;
@@ -258,6 +260,11 @@
   outline: none;
   font-family: monospace;
   transition: border-color 0.2s, box-shadow 0.2s;
+  /* Ensure clipboard ops (copy/cut/paste) always work on mobile */
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  touch-action: manipulation;
 }
 .ton-input:focus {
   border-color: rgba(251,191,36,0.45);
