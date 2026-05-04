@@ -40,38 +40,55 @@ export default function AccountPage() {
   };
 
   const doPaste = () => {
-    const tg = (window as any).Telegram?.WebApp;
+    const inp = walletInputRef.current;
+    if (!inp) return;
 
-    // Try Telegram clipboard API (v6.4+) — shows "Allow clipboard?" once
-    if (tg?.readTextFromClipboard) {
-      tg.readTextFromClipboard((text: string) => {
-        if (text) {
-          setWalletValue(text);
-          return;
-        }
-        // API returned empty — focus input for manual paste
-        walletInputRef.current?.focus();
-        setPasteHint(true);
-        setTimeout(() => setPasteHint(false), 3000);
-      });
-      return;
-    }
+    // Step 1: focus the input
+    inp.focus();
 
-    // Try browser clipboard API
-    navigator.clipboard?.readText?.()
-      .then((text) => {
-        if (text) setWalletValue(text);
-        else {
-          walletInputRef.current?.focus();
+    // Step 2: try execCommand('paste') — works silently in many Android WebViews
+    const before = inp.value;
+    try {
+      document.execCommand("paste");
+    } catch { /* ignore */ }
+
+    // After a tick, check if value changed (execCommand worked)
+    setTimeout(() => {
+      if (inp.value && inp.value !== before) {
+        setWalletValue(inp.value);
+        setPasteHint(false);
+        return;
+      }
+
+      // execCommand didn't work — try Telegram API
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.readTextFromClipboard) {
+        tg.readTextFromClipboard((text: string) => {
+          if (text) {
+            setWalletValue(text);
+            setPasteHint(false);
+          } else {
+            // Clipboard empty or denied — show focused hint for manual paste
+            inp.focus();
+            setPasteHint(true);
+            setTimeout(() => setPasteHint(false), 4000);
+          }
+        });
+        return;
+      }
+
+      // Fallback: browser clipboard API
+      navigator.clipboard?.readText?.()
+        .then((text) => {
+          if (text) { setWalletValue(text); setPasteHint(false); }
+          else { inp.focus(); setPasteHint(true); setTimeout(() => setPasteHint(false), 4000); }
+        })
+        .catch(() => {
+          inp.focus();
           setPasteHint(true);
-          setTimeout(() => setPasteHint(false), 3000);
-        }
-      })
-      .catch(() => {
-        walletInputRef.current?.focus();
-        setPasteHint(true);
-        setTimeout(() => setPasteHint(false), 3000);
-      });
+          setTimeout(() => setPasteHint(false), 4000);
+        });
+    }, 80);
   };
 
   useEffect(() => {
