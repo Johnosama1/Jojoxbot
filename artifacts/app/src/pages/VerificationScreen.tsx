@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../lib/api";
 import TgEmoji from "../components/TgEmoji";
+import EmojiText from "../components/EmojiText";
 
 const STYLES = `
 @keyframes vf-fadein {
@@ -259,9 +260,10 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
         maxWidth: 340, width: "100%", textAlign: "center",
         boxShadow: "0 24px 64px rgba(0,0,0,0.6), 0 0 80px rgba(92,64,255,0.06)",
       }}>
+        {/* ── Top icon — EmojiText parses 🎡(ID) automatically ── */}
         <div className="vf-row-0" style={{ marginBottom: 14 }}>
-          <span className="vf-emoji-top" style={{ fontSize: 70, lineHeight: 1, display: "inline-block" }}>
-            <TgEmoji id="5226711870492126219" fallback="🎡" size={68} />
+          <span className="vf-emoji-top" style={{ lineHeight: 1, display: "inline-block" }}>
+            <EmojiText text="🎡(5226711870492126219)" size={68} />
           </span>
         </div>
 
@@ -280,22 +282,22 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           وضمان أمان منصة Jo-jokes.
         </p>
 
+        {/* ── Feature list — full text lines with inline emoji IDs ── */}
         <div className="vf-row-3" style={{
           background: "rgba(124,110,255,0.07)", border: "1px solid rgba(124,110,255,0.18)",
           borderRadius: 16, padding: "14px 18px", marginBottom: 22, textAlign: "right",
         }}>
           {[
-            { id: "6132003286141637383", fb: "✅", text: "حساب واحد لكل جهاز" },
-            { id: "5296369303661067030", fb: "🔒", text: "لا يتم مشاركة بياناتك" },
-            { id: "5224607267797606837", fb: "☄️", text: "التحقق يستغرق ثانية واحدة" },
-          ].map(({ id, fb, text }, i) => (
-            <div key={id} style={{
+            "✅(6132003286141637383) حساب واحد لكل جهاز",
+            "🔒(5296369303661067030) لا يتم مشاركة بياناتك",
+            "☄️(5224607267797606837) التحقق يستغرق ثانية واحدة",
+          ].map((line, i) => (
+            <div key={i} style={{
               display: "flex", alignItems: "center", gap: 10,
               marginBottom: i < 2 ? 10 : 0,
               fontSize: 13.5, color: "rgba(255,255,255,0.78)",
             }}>
-              <TgEmoji id={id} fallback={fb} size={18} />
-              <span>{text}</span>
+              <EmojiText text={line} size={18} />
             </div>
           ))}
         </div>
@@ -310,6 +312,7 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           </div>
         )}
 
+        {/* ── CTA button — emoji parsed from text ── */}
         <div className="vf-row-5">
           <button
             className="vf-btn"
@@ -334,10 +337,7 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
                 جاري التحقق...
               </>
             ) : (
-              <>
-                <TgEmoji id="5296369303661067030" fallback="🔒" size={18} />
-                تحقق والدخول الآن
-              </>
+              <EmojiText text="🔒(5296369303661067030) تحقق والدخول الآن" size={18} />
             )}
           </button>
         </div>
