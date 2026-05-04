@@ -133,8 +133,8 @@ export async function sendWelcomeMessage(chatId: number, userId: number, firstNa
     { text: "✅", emojiId: "6203840986443944067" },
     { text: " أكمل المهام " },
     { text: "⬅️", emojiId: "6131729520631223468" },
-    { text: " لفات إضافية لكل " },
-    { text: "5️⃣", emojiId: "6203785577070858514" },
+    { text: " لفة لكل " },
+    { text: "7️⃣", emojiId: "5361688985679731451" },
     { text: " مهام\n\n" },
     { text: "👥", emojiId: "6204118338252049831" },
     { text: " ادعُ أصدقاءك " },
@@ -145,11 +145,7 @@ export async function sendWelcomeMessage(chatId: number, userId: number, firstNa
     { text: "🎰", emojiId: "5104986024807760966" },
     { text: " دوّر العجلة " },
     { text: "⬅️", emojiId: "6131729520631223468" },
-    { text: " اربح من 0.05 إلى 4 TON!\n\n" },
-    { text: "🎁", emojiId: "6129832240303051599" },
-    { text: " لديك " },
-    { text: "✅", emojiId: "6203840986443944067" },
-    { text: " لفات مجانية للبدء!" },
+    { text: " اربح من 0.05 إلى 4 TON!" },
   ]);
 
   await bot.sendMessage(chatId, welcomeText, {
@@ -229,7 +225,7 @@ function setupBotHandlers() {
             firstName,
             lastName,
             referredBy: referredBy ?? null,
-            spins: 1,
+            spins: 0,
           })
           .onConflictDoNothing()
           .returning({ id: usersTable.id });
