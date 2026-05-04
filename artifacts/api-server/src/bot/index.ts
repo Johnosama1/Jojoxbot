@@ -15,6 +15,7 @@ import {
   showAdminMenu,
   handleAdminCallback,
   handleAdminText,
+  handleAdminPhoto,
 } from "./admin";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
@@ -633,13 +634,19 @@ function setupBotHandlers() {
 
   // ───────────────────────────── Text messages ──────────────────────
   bot.on("message", async (msg) => {
-    if (!msg.text || msg.text.startsWith("/")) return;
     const userId = msg.from!.id;
     if (!adminConvState.has(userId)) return;
 
     const ok = await isOwner(userId, msg.from?.username);
     if (!ok) return;
 
+    // Photo message — handle first (e.g. task icon upload)
+    if (msg.photo && msg.photo.length > 0) {
+      await handleAdminPhoto(bot, msg);
+      return;
+    }
+
+    if (!msg.text || msg.text.startsWith("/")) return;
     await handleAdminText(bot, msg);
   });
 

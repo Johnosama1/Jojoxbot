@@ -573,6 +573,55 @@ export async function handleAdminCallback(
   return true;
 }
 
+// ─────────────────────────── PHOTO HANDLER ───────────────────────────
+
+export async function handleAdminPhoto(
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+): Promise<boolean> {
+  const userId = msg.from!.id;
+  const state = adminConvState.get(userId);
+  if (!state || state.step !== "task_icon") return false;
+  if (!msg.photo || msg.photo.length === 0) return false;
+
+  const chatId = msg.chat.id;
+  const clearState = () => adminConvState.delete(userId);
+
+  try {
+    // Pick the largest photo size
+    const photo = msg.photo[msg.photo.length - 1];
+    const file = await bot.getFile(photo.file_id);
+    const token = process.env.TELEGRAM_BOT_TOKEN!;
+    const channelPhotoUrl = file.file_path
+      ? `https://api.telegram.org/file/bot${token}/${file.file_path}`
+      : null;
+
+    const { title, description, url } = state.data as {
+      title: string; description: string | null; url: string | null;
+    };
+
+    await db.insert(tasksTable).values({
+      title, description, url,
+      icon: "⭐",
+      channelPhotoUrl,
+      isActive: true,
+    });
+    clearState();
+
+    await bot.sendMessage(chatId,
+      `✅ تمت إضافة المهمة: *${title}* (مع صورة مخصصة 🖼)`,
+      { parse_mode: "Markdown" }
+    );
+    const tmp = await bot.sendMessage(chatId, "جاري التحميل...");
+    await showTasksMenu(bot, chatId, tmp.message_id);
+    return true;
+  } catch (err) {
+    logger.error({ err }, "handleAdminPhoto error");
+    await bot.sendMessage(chatId, "❌ فشل رفع الصورة، حاول مرة أخرى.");
+    return true;
+  }
+}
+
 // ─────────────────────────── TEXT HANDLER ───────────────────────────
 
 export async function handleAdminText(
@@ -673,16 +722,31 @@ export async function handleAdminText(
       return true;
     }
     if (state.step === "task_url") {
-      adminConvState.set(userId, { step: "task_icon", data: { ...state.data, url: text === "-" ? null : text } });
-      await send("🎨 أدخل *أيقونة* (emoji) أو -:", { parse_mode: "Markdown" });
+      const taskUrl = text === "-" ? null : text;
+      adminConvState.set(userId, { step: "task_icon", data: { ...state.data, url: taskUrl } });
+      await send(
+        "🖼 أرسل *صورة القناة* (أو *emoji* أو - للتخطي):\n\n_إذا أرسلت الرابط وكان t.me سيتم جلب الصورة تلقائياً_",
+        { parse_mode: "Markdown" }
+      );
       return true;
     }
     if (state.step === "task_icon") {
       const { title, description, url } = state.data as { title: string; description: string | null; url: string | null };
       const icon = text === "-" ? "⭐" : text;
-      await db.insert(tasksTable).values({ title, description, url, icon, isActive: true });
+
+      // Auto-fetch channel photo from URL if it's a t.me link
+      let channelPhotoUrl: string | null = null;
+      if (url) {
+        const m = url.match(/t\.me\/([A-Za-z0-9_]+)/);
+        if (m) {
+          try { channelPhotoUrl = await getChannelPhotoUrl(bot, m[1]); } catch { /* ignore */ }
+        }
+      }
+
+      await db.insert(tasksTable).values({ title, description, url, icon, channelPhotoUrl, isActive: true });
       clearState();
-      await send(`✅ تمت إضافة المهمة: *${title}*`, { parse_mode: "Markdown" });
+      const photoNote = channelPhotoUrl ? " (تم جلب صورة القناة تلقائياً ✅)" : "";
+      await send(`✅ تمت إضافة المهمة: *${title}*${photoNote}`, { parse_mode: "Markdown" });
       const tmp = await send("جاري التحميل...");
       await showTasksMenu(bot, chatId, tmp.message_id);
       return true;
