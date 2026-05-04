@@ -77,6 +77,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@tonconnect/ui-react": "^2.4.4",
     "fflate": "^0.8.2",
     "lottie-web": "^5.13.0"
   }

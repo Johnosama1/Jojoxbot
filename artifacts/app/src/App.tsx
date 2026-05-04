@@ -1,19 +1,23 @@
 import { lazy, Suspense } from "react";
 import { useLocation, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TonConnectUIProvider } from "@tonconnect/ui-react";
 import { UserProvider, useUser } from "./lib/userContext";
 import TabBar from "./components/TabBar";
 import AnimatedBackground from "./components/AnimatedBackground";
 import HomePage from "./pages/HomePage";
 import VerificationScreen from "./pages/VerificationScreen";
 
-const TasksPage      = lazy(() => import("./pages/TasksPage"));
-const ReferralPage   = lazy(() => import("./pages/ReferralPage"));
-const AccountPage    = lazy(() => import("./pages/AccountPage"));
-const AdminPage      = lazy(() => import("./pages/AdminPage"));
+const TasksPage       = lazy(() => import("./pages/TasksPage"));
+const ReferralPage    = lazy(() => import("./pages/ReferralPage"));
+const AccountPage     = lazy(() => import("./pages/AccountPage"));
+const AdminPage       = lazy(() => import("./pages/AdminPage"));
 const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 
 const queryClient = new QueryClient();
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const MANIFEST_URL = `${window.location.origin}${BASE}/tonconnect-manifest.json`;
 
 function BannedScreen() {
   return (
@@ -45,12 +49,12 @@ const PageFallback = () => (
 );
 
 const ROUTES = [
-  { path: "/",            Component: HomePage,       lazy: false },
-  { path: "/tasks",       Component: TasksPage,      lazy: true  },
-  { path: "/referral",    Component: ReferralPage,   lazy: true  },
-  { path: "/leaderboard", Component: LeaderboardPage, lazy: true },
-  { path: "/account",     Component: AccountPage,    lazy: true  },
-  { path: "/admin",       Component: AdminPage,      lazy: true  },
+  { path: "/",            Component: HomePage,        lazy: false },
+  { path: "/tasks",       Component: TasksPage,       lazy: true  },
+  { path: "/referral",    Component: ReferralPage,    lazy: true  },
+  { path: "/leaderboard", Component: LeaderboardPage, lazy: true  },
+  { path: "/account",     Component: AccountPage,     lazy: true  },
+  { path: "/admin",       Component: AdminPage,       lazy: true  },
 ] as const;
 
 function PersistentRouter() {
@@ -102,16 +106,18 @@ function PersistentRouter() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <UserProvider>
-        <AnimatedBackground />
-        <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <PersistentRouter />
-          </WouterRouter>
-        </div>
-      </UserProvider>
-    </QueryClientProvider>
+    <TonConnectUIProvider manifestUrl={MANIFEST_URL}>
+      <QueryClientProvider client={queryClient}>
+        <UserProvider>
+          <AnimatedBackground />
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <PersistentRouter />
+            </WouterRouter>
+          </div>
+        </UserProvider>
+      </QueryClientProvider>
+    </TonConnectUIProvider>
   );
 }
 
