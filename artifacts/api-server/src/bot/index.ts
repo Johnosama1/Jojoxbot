@@ -529,6 +529,7 @@ function setupBotHandlers() {
         ipVerifiedAt: null,
         deviceId: null,
         verificationToken: null,
+        isVisible: true,
       });
       const count = (result as unknown as { rowCount?: number }).rowCount ?? 0;
       try {
