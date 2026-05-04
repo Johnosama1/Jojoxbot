@@ -176,15 +176,25 @@ export default function TasksPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  {/* Icon with glow */}
+                  {/* Channel photo or icon */}
                   <div style={{
-                    width: 44, height: 44, borderRadius: 14, flexShrink: 0,
+                    width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 22,
+                    fontSize: 22, overflow: "hidden",
                     background: isDone ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.07)",
-                    border: isDone ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(255,255,255,0.08)",
+                    border: isDone ? "2px solid rgba(16,185,129,0.40)" : "2px solid rgba(255,255,255,0.12)",
+                    boxShadow: task.channelPhotoUrl ? "0 0 12px rgba(0,0,0,0.40)" : "none",
                   }}>
-                    {task.icon || "⭐"}
+                    {task.channelPhotoUrl ? (
+                      <img
+                        src={task.channelPhotoUrl}
+                        alt={task.title}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      task.icon || "⭐"
+                    )}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>

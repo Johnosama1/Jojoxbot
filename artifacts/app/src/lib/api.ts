@@ -140,6 +140,7 @@ export interface Task {
   description: string | null;
   url: string | null;
   icon: string | null;
+  channelPhotoUrl: string | null;
   isActive: boolean;
   expiresAt: string | null;
   createdAt: string;

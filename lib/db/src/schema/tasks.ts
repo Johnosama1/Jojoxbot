@@ -8,6 +8,7 @@ export const tasksTable = pgTable("tasks", {
   description: text("description"),
   url: text("url"),
   icon: text("icon").default("⭐"),
+  channelPhotoUrl: text("channel_photo_url"),
   isActive: boolean("is_active").notNull().default(true),
   expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

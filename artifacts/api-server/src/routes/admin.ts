@@ -12,6 +12,8 @@ import {
 import { eq, count } from "drizzle-orm";
 import { invalidateWheelCache } from "./wheel";
 import { invalidateTasksCache } from "./tasks";
+import { getBot } from "../bot";
+import { getChannelPhotoUrl } from "../bot/admin";
 
 const router = Router();
 
@@ -84,11 +86,26 @@ router.post("/tasks", async (req, res) => {
   if (!title || typeof title !== "string" || title.length > 200) {
     res.status(400).json({ error: "Invalid title" }); return;
   }
+
+  // Auto-fetch channel photo if URL is a t.me link
+  let channelPhotoUrl: string | null = null;
+  const cleanUrl = url?.trim() || null;
+  if (cleanUrl) {
+    const m = cleanUrl.match(/t\.me\/([A-Za-z0-9_]+)/);
+    if (m) {
+      try {
+        const botInstance = getBot();
+        if (botInstance) channelPhotoUrl = await getChannelPhotoUrl(botInstance, m[1]);
+      } catch { /* ignore */ }
+    }
+  }
+
   const [task] = await db.insert(tasksTable).values({
     title: title.trim(),
     description: description?.trim() || null,
-    url: url?.trim() || null,
+    url: cleanUrl,
     icon: (icon?.trim() || "⭐").slice(0, 10),
+    channelPhotoUrl,
     expiresAt: expiresAt ? new Date(expiresAt) : null,
   }).returning();
   invalidateTasksCache();

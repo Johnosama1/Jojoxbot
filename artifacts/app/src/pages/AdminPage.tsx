@@ -234,7 +234,16 @@ export default function AdminPage() {
                 <div className="flex flex-col gap-3">
                   {tasks.map((task) => (
                     <div key={task.id} className="bg-purple-900/20 border border-purple-700/40 rounded-xl p-3 flex items-start gap-3">
-                      <span className="text-2xl">{task.icon}</span>
+                      {/* Channel photo or icon */}
+                      {task.channelPhotoUrl ? (
+                        <img
+                          src={task.channelPhotoUrl}
+                          alt={task.title}
+                          style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid rgba(147,51,234,0.5)" }}
+                        />
+                      ) : (
+                        <span className="text-2xl flex-shrink-0">{task.icon}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-bold text-sm">{task.title}</p>
                         {task.description && <p className="text-purple-400 text-xs">{task.description}</p>}

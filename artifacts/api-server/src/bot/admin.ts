@@ -25,6 +25,24 @@ export async function checkChannelMembership(
   }
 }
 
+export async function getChannelPhotoUrl(
+  bot: TelegramBot,
+  channelUsername: string
+): Promise<string | null> {
+  try {
+    const chat = await bot.getChat(`@${channelUsername}`) as unknown as {
+      photo?: { big_file_id: string };
+    };
+    if (!chat.photo?.big_file_id) return null;
+    const file = await bot.getFile(chat.photo.big_file_id);
+    if (!file.file_path) return null;
+    const token = process.env.TELEGRAM_BOT_TOKEN!;
+    return `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+  } catch {
+    return null;
+  }
+}
+
 interface ConvState {
   step: string;
   data: Record<string, unknown>;
