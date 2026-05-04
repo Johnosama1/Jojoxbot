@@ -1,36 +1,44 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useUser } from "../lib/userContext";
-import { api } from "../lib/api";
+import { api, WheelSlot } from "../lib/api";
 import WheelCanvas from "../components/WheelCanvas";
 
 export default function HomePage() {
-  const { user, refresh, slots } = useUser();
+  const { user, refresh, slots: contextSlots } = useUser();
   const [spinning, setSpinning] = useState(false);
   const [winnerIndex, setWinnerIndex] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [winAmount, setWinAmount] = useState("");
   const [error, setError] = useState("");
+  // Use spin-response slots for accurate animation alignment
+  const [animSlots, setAnimSlots] = useState<WheelSlot[] | null>(null);
+
+  const slots = animSlots ?? contextSlots;
 
   const handleSpin = async () => {
     if (!user || spinning || user.spins <= 0) return;
     setError("");
     setShowResult(false);
     setWinnerIndex(null);
-    setSpinning(true); // start wheel immediately — don't wait for API
+    setAnimSlots(null);
+    setSpinning(true);
     try {
       const result = await api.spin(user.id);
-      setWinnerIndex(result.slotIndex); // wheel lands when API returns
+      // Use slots from server response to guarantee index alignment
+      setAnimSlots(result.slots);
+      setWinnerIndex(result.slotIndex);
       setWinAmount(result.winner.amount);
       await refresh();
     } catch (e: unknown) {
-      setSpinning(false); // stop wheel on error
+      setSpinning(false);
       setError(e instanceof Error ? e.message : "فشل الدوران");
     }
   };
 
   const handleSpinEnd = () => {
     setSpinning(false);
-    setShowResult(true);
+    // Small delay so the wheel visually settles before result pops up
+    setTimeout(() => setShowResult(true), 350);
   };
 
   const userDisplay = user ? (user.firstName || user.username || "مستخدم") : "...";
@@ -164,7 +172,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Result */}
+        {/* Result — appears AFTER wheel stops + 350ms delay */}
         {showResult && (
           <div className="text-center win-pop">
             <div style={{ fontSize: 38, fontWeight: 900, lineHeight: 1 }} className="gold-text">
@@ -217,7 +225,7 @@ export default function HomePage() {
             background: "rgba(255,255,255,0.05)", borderRadius: 12,
             padding: "8px 16px", border: "1px solid rgba(255,255,255,0.08)",
           }}>
-            ادعُ 5 أصدقاء أو أكمل 7 مهام للحصول على لفة مجانية
+            ادعُ 5 أصدقاء أو أكمل 5 مهام للحصول على لفة مجانية
           </p>
         )}
       </div>

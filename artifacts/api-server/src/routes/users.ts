@@ -87,11 +87,17 @@ router.post("/:id/spin", telegramAuth, spinRateLimit, async (req, res) => {
   const totalWeight = slots.reduce((sum, s) => sum + s.probability, 0);
   if (totalWeight === 0) { res.status(400).json({ error: "All probabilities are zero" }); return; }
 
-  let rand = Math.random() * totalWeight;
-  let winner = slots[slots.length - 1];
+  // Absolute probabilities out of 100 — each slot's % is exactly its chance
+  const rand = Math.random() * 100;
+  let winner: typeof slots[0] | null = null;
+  let cumulative = 0;
   for (const slot of slots) {
-    rand -= slot.probability;
-    if (rand <= 0) { winner = slot; break; }
+    cumulative += slot.probability;
+    if (rand < cumulative) { winner = slot; break; }
+  }
+  // Fallback: if rand fell in the "gap" (sum < 100), pick first non-zero slot
+  if (!winner) {
+    winner = slots.find(s => s.probability > 0) ?? slots[0];
   }
 
   await db
@@ -100,8 +106,10 @@ router.post("/:id/spin", telegramAuth, spinRateLimit, async (req, res) => {
     .where(eq(usersTable.id, id));
 
   const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
+  const slotIndex = slots.findIndex(s => s.id === winner!.id);
   res.setHeader("Cache-Control", "no-store");
-  res.json({ winner, user: updated, slotIndex: slots.findIndex(s => s.id === winner.id) });
+  // Return full slots array so frontend always uses the correct order for animation
+  res.json({ winner, user: updated, slotIndex, slots });
 });
 
 // ── Save / update wallet address ────────────────────────────────────

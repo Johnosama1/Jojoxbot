@@ -66,7 +66,7 @@ export const api = {
   getUser: (id: number) => apiCall<User>(`/users/${id}`),
 
   spin: (userId: number) =>
-    apiCall<{ winner: WheelSlot; user: User; slotIndex: number }>(`/users/${userId}/spin`, { method: "POST" }),
+    apiCall<{ winner: WheelSlot; user: User; slotIndex: number; slots: WheelSlot[] }>(`/users/${userId}/spin`, { method: "POST" }),
 
   getTasks: () => apiCall<Task[]>("/tasks"),
   getUserCompletedTasks: (userId: number) => apiCall<number[]>(`/tasks/${userId}/completed`),
