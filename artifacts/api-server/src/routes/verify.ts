@@ -280,7 +280,13 @@ router.post("/verify-device", telegramAuth, async (req, res) => {
     try {
       const bot = getBot();
       if (bot) {
-        await bot.sendMessage(userId, "🚫 تم حظر حسابك بسبب اكتشاف حساب مكرر من نفس الجهاز.");
+        const { text: banText, entities: banEntities } = buildMsg([
+          { text: "🚫", emojiId: "5472267631979405211" },
+          { text: " تم حظر حسابك بسبب اكتشاف حساب مكرر من نفس الجهاز." },
+        ]);
+        await bot.sendMessage(userId, banText, {
+          entities: banEntities as any,
+        });
       }
     } catch { /* user may have blocked bot */ }
 
