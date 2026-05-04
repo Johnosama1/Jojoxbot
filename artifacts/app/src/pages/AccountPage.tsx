@@ -30,10 +30,8 @@ export default function AccountPage() {
   const [error, setError] = useState("");
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [pasteModal, setPasteModal] = useState(false);
-  const [modalVal, setModalVal] = useState("");
+  const [pasteHint, setPasteHint] = useState(false);
   const walletInputRef = useRef<HTMLInputElement>(null);
-  const modalInputRef = useRef<HTMLInputElement>(null);
 
   const setWalletValue = (text: string) => {
     const trimmed = text.trim();
@@ -41,38 +39,39 @@ export default function AccountPage() {
     if (walletInputRef.current) walletInputRef.current.value = trimmed;
   };
 
-  const openPasteModal = () => {
-    setModalVal("");
-    setPasteModal(true);
-    // Auto-focus the modal input after it mounts
-    setTimeout(() => modalInputRef.current?.focus(), 100);
-  };
-
-  const confirmPaste = () => {
-    if (modalVal.trim()) {
-      setWalletValue(modalVal.trim());
-    }
-    setPasteModal(false);
-    setModalVal("");
-  };
-
   const doPaste = () => {
     const tg = (window as any).Telegram?.WebApp;
+
+    // Try Telegram clipboard API (v6.4+) — shows "Allow clipboard?" once
     if (tg?.readTextFromClipboard) {
-      // Telegram shows a native "Allow clipboard access?" dialog
-      // If user approves, text comes back; otherwise fall through to modal
-      let resolved = false;
       tg.readTextFromClipboard((text: string) => {
-        resolved = true;
-        if (text) setWalletValue(text);
-        else openPasteModal();
+        if (text) {
+          setWalletValue(text);
+          return;
+        }
+        // API returned empty — focus input for manual paste
+        walletInputRef.current?.focus();
+        setPasteHint(true);
+        setTimeout(() => setPasteHint(false), 3000);
       });
-      // If callback never fires (older SDK), open modal after 600ms
-      setTimeout(() => { if (!resolved) openPasteModal(); }, 600);
       return;
     }
-    // No Telegram API → open manual paste modal
-    openPasteModal();
+
+    // Try browser clipboard API
+    navigator.clipboard?.readText?.()
+      .then((text) => {
+        if (text) setWalletValue(text);
+        else {
+          walletInputRef.current?.focus();
+          setPasteHint(true);
+          setTimeout(() => setPasteHint(false), 3000);
+        }
+      })
+      .catch(() => {
+        walletInputRef.current?.focus();
+        setPasteHint(true);
+        setTimeout(() => setPasteHint(false), 3000);
+      });
   };
 
   useEffect(() => {
@@ -124,90 +123,6 @@ export default function AccountPage() {
 
   return (
     <div className="page-content px-4 pt-5 flex flex-col gap-4">
-
-      {/* ── Paste modal ── */}
-      {pasteModal && (
-        <div
-          onClick={() => setPasteModal(false)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            padding: "0 24px",
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "linear-gradient(145deg,#1a1a2e,#16213e)",
-              border: "1px solid rgba(251,191,36,0.35)",
-              borderRadius: 20, padding: "24px 20px",
-              width: "100%", maxWidth: 360,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
-              display: "flex", flexDirection: "column", gap: 16,
-            }}
-          >
-            <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, margin: 0, textAlign: "center" }}>
-              الصق عنوان محفظة TON
-            </p>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, margin: 0, textAlign: "center" }}>
-              اضغط مطولاً على الحقل واختر لصق
-            </p>
-            <input
-              ref={modalInputRef}
-              type="text"
-              value={modalVal}
-              onChange={(e) => setModalVal(e.target.value)}
-              onPaste={(e) => {
-                const text = e.clipboardData?.getData("text") ?? "";
-                if (text) {
-                  e.preventDefault();
-                  setModalVal(text.trim());
-                }
-              }}
-              placeholder="UQ... أو EQ..."
-              dir="ltr"
-              autoFocus
-              style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(251,191,36,0.4)",
-                borderRadius: 12, padding: "13px 14px",
-                color: "#fff", fontSize: 13,
-                fontFamily: "monospace", outline: "none",
-                width: "100%", boxSizing: "border-box",
-              }}
-            />
-            <div style={{ display: "flex", gap: 10 }}>
-              <button
-                onClick={() => { setPasteModal(false); setModalVal(""); }}
-                style={{
-                  flex: 1, padding: "12px", borderRadius: 12,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  color: "rgba(255,255,255,0.6)", fontSize: 14,
-                  cursor: "pointer", fontFamily: "inherit",
-                }}
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={confirmPaste}
-                disabled={!modalVal.trim()}
-                style={{
-                  flex: 2, padding: "12px", borderRadius: 12,
-                  background: modalVal.trim() ? "#fbbf24" : "rgba(251,191,36,0.25)",
-                  border: "none", color: modalVal.trim() ? "#000" : "rgba(255,255,255,0.3)",
-                  fontSize: 14, fontWeight: 700,
-                  cursor: modalVal.trim() ? "pointer" : "not-allowed",
-                  fontFamily: "inherit",
-                }}
-              >
-                تأكيد
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Profile hero ── */}
       <div
@@ -360,17 +275,27 @@ export default function AccountPage() {
                 defaultValue=""
                 onInput={(e) => setWalletAddress((e.target as HTMLInputElement).value)}
                 onPaste={(e) => {
-                  // Let native paste happen, then sync state from DOM
-                  requestAnimationFrame(() => {
-                    const val = walletInputRef.current?.value ?? "";
-                    if (val) setWalletAddress(val.trim());
-                  });
+                  const text = e.clipboardData?.getData("text") ?? "";
+                  if (text) {
+                    e.preventDefault();
+                    setWalletValue(text);
+                  } else {
+                    requestAnimationFrame(() => {
+                      const val = walletInputRef.current?.value ?? "";
+                      if (val) setWalletValue(val);
+                    });
+                  }
                 }}
-                placeholder="UQ... أو EQ..."
+                placeholder={pasteHint ? "اضغط مطولاً هنا ← لصق ✋" : "UQ... أو EQ..."}
                 disabled={submitting}
                 dir="ltr"
                 className="ton-input"
-                style={{ flex: 1 }}
+                style={{
+                  flex: 1,
+                  borderColor: pasteHint ? "rgba(251,191,36,0.8)" : undefined,
+                  boxShadow: pasteHint ? "0 0 0 3px rgba(251,191,36,0.25)" : undefined,
+                  animation: pasteHint ? "pulse 0.8s ease-in-out infinite alternate" : undefined,
+                }}
               />
               <button
                 type="button"
@@ -389,6 +314,11 @@ export default function AccountPage() {
                 لصق
               </button>
             </div>
+            {pasteHint && (
+              <p style={{ color: "#fbbf24", fontSize: 11, margin: "6px 0 0", textAlign: "right" }}>
+                اضغط مطولاً على الحقل ← اختر لصق
+              </p>
+            )}
           </div>
           <div>
             <label style={{
