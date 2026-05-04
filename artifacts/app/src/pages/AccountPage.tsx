@@ -225,20 +225,20 @@ export default function AccountPage() {
             }}>
               عنوان محفظة TON
             </label>
-            <div style={{ position: "relative" }}>
+            <div style={{ display: "flex", gap: 8 }}>
               <input
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 placeholder="UQ... أو EQ..."
-                disabled={!canWithdraw || submitting}
+                disabled={submitting}
                 dir="ltr"
                 className="ton-input"
-                style={{ paddingRight: 64 }}
+                style={{ flex: 1 }}
               />
               <button
                 type="button"
-                disabled={!canWithdraw || submitting}
+                disabled={submitting}
                 onClick={() => {
                   const tg = (window as any).Telegram?.WebApp;
                   if (tg?.readTextFromClipboard) {
@@ -246,16 +246,19 @@ export default function AccountPage() {
                       if (text) setWalletAddress(text.trim());
                     });
                   } else {
-                    navigator.clipboard?.readText?.().then((text) => {
-                      if (text) setWalletAddress(text.trim());
-                    }).catch(() => {});
+                    navigator.clipboard?.readText?.()
+                      .then((text) => { if (text) setWalletAddress(text.trim()); })
+                      .catch(() => {});
                   }
                 }}
                 style={{
-                  position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
-                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
-                  borderRadius: 8, color: "#fff", fontSize: 12, padding: "4px 10px",
-                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: 12, color: "#fff", fontSize: 13,
+                  padding: "0 14px", cursor: "pointer",
+                  fontFamily: "inherit", whiteSpace: "nowrap",
+                  minHeight: 48,
                 }}
               >
                 لصق
