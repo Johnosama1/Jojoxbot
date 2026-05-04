@@ -104,7 +104,7 @@ router.post("/:taskId/complete", async (req, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (user) {
     const newTasksCompleted = (user.tasksCompleted || 0) + 1;
-    const extraSpin = newTasksCompleted % 7 === 0 ? 1 : 0;
+    const extraSpin = newTasksCompleted % 5 === 0 ? 1 : 0;
     await db
       .update(usersTable)
       .set({ tasksCompleted: newTasksCompleted, spins: sql`spins + ${extraSpin}` })

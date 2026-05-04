@@ -53,7 +53,7 @@ export default function TasksPage() {
     }
   };
 
-  const progressToNextSpin = user ? (user.tasksCompleted % 7) : 0;
+  const progressToNextSpin = user ? (user.tasksCompleted % 5) : 0;
 
   return (
     <div className="page-content px-4 pt-5 flex flex-col gap-4">
@@ -71,7 +71,7 @@ export default function TasksPage() {
         </div>
         <h1 className="gold-text" style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>المهام</h1>
         <p style={{ color: "rgba(255,255,255,0.42)", fontSize: 13, marginTop: 4 }}>
-          أكمل 7 مهام واحصل على لفة مجانية 🎡
+          أكمل 5 مهام واحصل على لفة مجانية 🎡
         </p>
       </div>
 
@@ -97,14 +97,14 @@ export default function TasksPage() {
           }}>
             <Zap size={12} color="#fbbf24" />
             <span style={{ color: "#fbbf24", fontWeight: 800, fontSize: 13 }}>
-              {progressToNextSpin}/7
+              {progressToNextSpin}/5
             </span>
           </div>
         </div>
 
         {/* Milestone dots */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, gap: 6 }}>
-          {Array.from({ length: 7 }, (_, i) => (
+          {Array.from({ length: 5 }, (_, i) => (
             <div
               key={i}
               style={{
@@ -125,10 +125,10 @@ export default function TasksPage() {
         </div>
 
         <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${(progressToNextSpin / 7) * 100}%` }} />
+          <div className="progress-fill" style={{ width: `${(progressToNextSpin / 5) * 100}%` }} />
         </div>
         <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 8, textAlign: "center" }}>
-          {7 - progressToNextSpin} مهام متبقية للفة المجانية 🎡
+          {5 - progressToNextSpin} مهام متبقية للفة المجانية 🎡
         </p>
       </div>
 
@@ -230,7 +230,7 @@ export default function TasksPage() {
                         padding: "2px 8px",
                       }}>
                         <Zap size={9} color="#fbbf24" />
-                        <span style={{ color: "#fbbf24", fontSize: 10, fontWeight: 700 }}>+1 لفة كل 7 مهام</span>
+                        <span style={{ color: "#fbbf24", fontSize: 10, fontWeight: 700 }}>+1 لفة كل 5 مهام</span>
                       </div>
                     )}
                   </div>
