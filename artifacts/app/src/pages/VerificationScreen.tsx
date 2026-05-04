@@ -221,7 +221,10 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
         textAlign: "center",
         boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
       }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>🎰</div>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>
+          {/* @ts-ignore */}
+          <tg-emoji emoji-id="5226711870492126219">🎡</tg-emoji>
+        </div>
 
         <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>
           مرحباً {firstName}!
@@ -242,15 +245,19 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           marginBottom: 24, textAlign: "right",
         }}>
           {[
-            { icon: "✅", text: "حساب واحد لكل جهاز" },
-            { icon: "🔒", text: "لا يتم مشاركة بياناتك" },
-            { icon: "⚡", text: "التحقق يستغرق ثانية واحدة" },
-          ].map(({ icon, text }) => (
-            <div key={text} style={{
+            { id: "6132003286141637383", fallback: "✅", text: "حساب واحد لكل جهاز" },
+            { id: "5296369303661067030", fallback: "🔒", text: "لا يتم مشاركة بياناتك" },
+            { id: "5224607267797606837", fallback: "☄️", text: "التحقق يستغرق ثانية واحدة" },
+          ].map(({ id, fallback, text }) => (
+            <div key={id} style={{
               display: "flex", alignItems: "center", gap: 10,
               marginBottom: 8, fontSize: 13, color: "rgba(255,255,255,0.75)",
             }}>
-              <span>{icon}</span><span>{text}</span>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>
+                {/* @ts-ignore */}
+                <tg-emoji emoji-id={id}>{fallback}</tg-emoji>
+              </span>
+              <span>{text}</span>
             </div>
           ))}
         </div>
@@ -278,9 +285,16 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
             fontSize: 16, fontWeight: 700,
             cursor: status === "loading" ? "not-allowed" : "pointer",
             transition: "opacity 0.2s", letterSpacing: 0.3,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          {status === "loading" ? "⏳ جاري التحقق..." : "🔐 تحقق والدخول الآن"}
+          {status === "loading" ? "⏳ جاري التحقق..." : (
+            <>
+              {/* @ts-ignore */}
+              <tg-emoji emoji-id="5296369303661067030">🔒</tg-emoji>
+              {" "}تحقق والدخول الآن
+            </>
+          )}
         </button>
       </div>
     </div>
