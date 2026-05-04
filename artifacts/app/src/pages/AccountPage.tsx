@@ -30,33 +30,49 @@ export default function AccountPage() {
   const [error, setError] = useState("");
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [pasteModal, setPasteModal] = useState(false);
+  const [modalVal, setModalVal] = useState("");
   const walletInputRef = useRef<HTMLInputElement>(null);
+  const modalInputRef = useRef<HTMLInputElement>(null);
 
-  // Write text into the uncontrolled input and sync React state
   const setWalletValue = (text: string) => {
     const trimmed = text.trim();
     setWalletAddress(trimmed);
     if (walletInputRef.current) walletInputRef.current.value = trimmed;
   };
 
+  const openPasteModal = () => {
+    setModalVal("");
+    setPasteModal(true);
+    // Auto-focus the modal input after it mounts
+    setTimeout(() => modalInputRef.current?.focus(), 100);
+  };
+
+  const confirmPaste = () => {
+    if (modalVal.trim()) {
+      setWalletValue(modalVal.trim());
+    }
+    setPasteModal(false);
+    setModalVal("");
+  };
+
   const doPaste = () => {
     const tg = (window as any).Telegram?.WebApp;
-    // Method 1: Telegram API (v6.4+) — shows native Telegram clipboard dialog
     if (tg?.readTextFromClipboard) {
+      // Telegram shows a native "Allow clipboard access?" dialog
+      // If user approves, text comes back; otherwise fall through to modal
+      let resolved = false;
       tg.readTextFromClipboard((text: string) => {
+        resolved = true;
         if (text) setWalletValue(text);
+        else openPasteModal();
       });
+      // If callback never fires (older SDK), open modal after 600ms
+      setTimeout(() => { if (!resolved) openPasteModal(); }, 600);
       return;
     }
-    // Method 2: browser Clipboard API
-    if (navigator.clipboard?.readText) {
-      navigator.clipboard.readText()
-        .then((text) => { if (text) setWalletValue(text); })
-        .catch(() => {});
-      return;
-    }
-    // Method 3: focus input so user can long-press paste natively
-    walletInputRef.current?.focus();
+    // No Telegram API → open manual paste modal
+    openPasteModal();
   };
 
   useEffect(() => {
@@ -108,6 +124,90 @@ export default function AccountPage() {
 
   return (
     <div className="page-content px-4 pt-5 flex flex-col gap-4">
+
+      {/* ── Paste modal ── */}
+      {pasteModal && (
+        <div
+          onClick={() => setPasteModal(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "0 24px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "linear-gradient(145deg,#1a1a2e,#16213e)",
+              border: "1px solid rgba(251,191,36,0.35)",
+              borderRadius: 20, padding: "24px 20px",
+              width: "100%", maxWidth: 360,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+              display: "flex", flexDirection: "column", gap: 16,
+            }}
+          >
+            <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, margin: 0, textAlign: "center" }}>
+              الصق عنوان محفظة TON
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, margin: 0, textAlign: "center" }}>
+              اضغط مطولاً على الحقل واختر لصق
+            </p>
+            <input
+              ref={modalInputRef}
+              type="text"
+              value={modalVal}
+              onChange={(e) => setModalVal(e.target.value)}
+              onPaste={(e) => {
+                const text = e.clipboardData?.getData("text") ?? "";
+                if (text) {
+                  e.preventDefault();
+                  setModalVal(text.trim());
+                }
+              }}
+              placeholder="UQ... أو EQ..."
+              dir="ltr"
+              autoFocus
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(251,191,36,0.4)",
+                borderRadius: 12, padding: "13px 14px",
+                color: "#fff", fontSize: 13,
+                fontFamily: "monospace", outline: "none",
+                width: "100%", boxSizing: "border-box",
+              }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => { setPasteModal(false); setModalVal(""); }}
+                style={{
+                  flex: 1, padding: "12px", borderRadius: 12,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(255,255,255,0.6)", fontSize: 14,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={confirmPaste}
+                disabled={!modalVal.trim()}
+                style={{
+                  flex: 2, padding: "12px", borderRadius: 12,
+                  background: modalVal.trim() ? "#fbbf24" : "rgba(251,191,36,0.25)",
+                  border: "none", color: modalVal.trim() ? "#000" : "rgba(255,255,255,0.3)",
+                  fontSize: 14, fontWeight: 700,
+                  cursor: modalVal.trim() ? "pointer" : "not-allowed",
+                  fontFamily: "inherit",
+                }}
+              >
+                تأكيد
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Profile hero ── */}
       <div
