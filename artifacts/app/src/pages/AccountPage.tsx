@@ -234,19 +234,25 @@ export default function AccountPage() {
                 disabled={!canWithdraw || submitting}
                 dir="ltr"
                 className="ton-input"
-                style={{ paddingLeft: 64 }}
+                style={{ paddingRight: 64 }}
               />
               <button
                 type="button"
                 disabled={!canWithdraw || submitting}
-                onClick={async () => {
-                  try {
-                    const text = await navigator.clipboard.readText();
-                    if (text) setWalletAddress(text.trim());
-                  } catch { /* ignore */ }
+                onClick={() => {
+                  const tg = (window as any).Telegram?.WebApp;
+                  if (tg?.readTextFromClipboard) {
+                    tg.readTextFromClipboard((text: string | null) => {
+                      if (text) setWalletAddress(text.trim());
+                    });
+                  } else {
+                    navigator.clipboard?.readText?.().then((text) => {
+                      if (text) setWalletAddress(text.trim());
+                    }).catch(() => {});
+                  }
                 }}
                 style={{
-                  position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+                  position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
                   background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
                   borderRadius: 8, color: "#fff", fontSize: 12, padding: "4px 10px",
                   cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
