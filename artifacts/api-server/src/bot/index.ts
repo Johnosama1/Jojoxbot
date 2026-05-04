@@ -668,7 +668,7 @@ async function processWithdrawal(
       });
     } catch { /* ignore edit errors */ }
 
-    // Notify user (only on rejection, on approval notify when transfer is complete)
+    // Notify user
     if (action === "rejected") {
       try {
         await bot.sendMessage(
@@ -676,6 +676,20 @@ async function processWithdrawal(
           `❌ تم رفض طلب السحب\n\nتم إعادة ${parseFloat(wd.amount).toFixed(4)} TON لرصيدك.`
         );
       } catch { /* user may not be reachable */ }
+    } else if (action === "approved" && !autoMode) {
+      // Manual mode — notify user directly since no auto-processor will do it
+      try {
+        const amtStr = parseFloat(wd.amount).toFixed(4);
+        const { text: uText, entities: uEnt } = buildMsg([
+          { text: "✅", emojiId: "6008009744969637955" },
+          { text: ` تم الموافقة على سحبك بنجاح!\n\n` },
+          { text: "💵", emojiId: "5409048419211682843" },
+          { text: ` المبلغ: ${amtStr} TON\n` },
+          { text: "👛", emojiId: "5039557485157942342" },
+          { text: ` العنوان: ${wd.walletAddress}` },
+        ]);
+        await bot.sendMessage(wd.userId, uText, { entities: uEnt as any });
+      } catch { /* ignore */ }
     }
 
     // Fire-and-forget TON transfer if configured — pass admin chatId for completion notification

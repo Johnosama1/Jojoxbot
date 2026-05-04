@@ -10,6 +10,26 @@ function getBot() {
   return require("../bot").getBot?.();
 }
 
+// Inline buildMsg to avoid circular dependency with bot/index.ts
+function utf16Len(s: string): number {
+  let n = 0;
+  for (const ch of s) n += (ch.codePointAt(0)! > 0xffff) ? 2 : 1;
+  return n;
+}
+function buildMsgLocal(parts: { text: string; emojiId?: string }[]) {
+  let text = "";
+  let offset = 0;
+  const entities: object[] = [];
+  for (const p of parts) {
+    if (p.emojiId) {
+      entities.push({ type: "custom_emoji", offset, length: utf16Len(p.text), custom_emoji_id: p.emojiId });
+    }
+    text += p.text;
+    offset += utf16Len(p.text);
+  }
+  return { text, entities };
+}
+
 export { isTonConfigured };
 
 export async function executeAutoWithdrawal(
@@ -40,16 +60,19 @@ export async function executeAutoWithdrawal(
     const estimatedFee = wd?.fee ? parseFloat(wd.fee).toFixed(4) : "0.05";
 
     if (bot) {
-      // Notify user
+      // Notify user — custom emoji message
       try {
-        await bot.sendMessage(
-          userId,
-          `✅ تم إرسال ${parseFloat(amount).toFixed(4)} TON بنجاح!\n\n` +
-          `💲 المبلغ: ${parseFloat(amount).toFixed(4)} TON\n` +
-          `👛 العنوان: \`${walletAddress}\`\n` +
-          `🔗 المرجع: \`${result.txRef}\``,
-          { parse_mode: "Markdown" }
-        );
+        const amtStr = parseFloat(amount).toFixed(4);
+        const { text: uText, entities: uEnt } = buildMsgLocal([
+          { text: "✅", emojiId: "6008009744969637955" },
+          { text: ` تم الموافقة على سحبك بنجاح!\n\n` },
+          { text: "💵", emojiId: "5409048419211682843" },
+          { text: ` المبلغ: ${amtStr} TON\n` },
+          { text: "👛", emojiId: "5039557485157942342" },
+          { text: ` العنوان: ${walletAddress}\n` },
+          { text: `🔗 المرجع: ${result.txRef}` },
+        ]);
+        await bot.sendMessage(userId, uText, { entities: uEnt as any });
       } catch { /* ignore */ }
 
       // Notify admin
