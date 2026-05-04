@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "../lib/userContext";
 import { api, Withdrawal, getWithdrawalsOnce, invalidateUserCaches } from "../lib/api";
 import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList } from "lucide-react";
@@ -30,6 +30,35 @@ export default function AccountPage() {
   const [error, setError] = useState("");
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const walletInputRef = useRef<HTMLInputElement>(null);
+
+  const doPaste = () => {
+    const tg = (window as any).Telegram?.WebApp;
+    // Method 1: Telegram API (v6.4+)
+    if (tg?.readTextFromClipboard) {
+      tg.readTextFromClipboard((text: string | null) => {
+        if (text) setWalletAddress(text.trim());
+      });
+      return;
+    }
+    // Method 2: focus input + execCommand (works in Android WebView)
+    const inp = walletInputRef.current;
+    if (inp) {
+      inp.focus();
+      try {
+        // @ts-ignore
+        document.execCommand("paste");
+        // Give React time to pick up the DOM change
+        setTimeout(() => {
+          if (inp.value) setWalletAddress(inp.value.trim());
+        }, 50);
+      } catch { /* ignore */ }
+    }
+    // Method 3: browser clipboard API fallback
+    navigator.clipboard?.readText?.()
+      .then((text) => { if (text) setWalletAddress(text.trim()); })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -227,9 +256,17 @@ export default function AccountPage() {
             </label>
             <div style={{ display: "flex", gap: 8 }}>
               <input
+                ref={walletInputRef}
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
+                onPaste={(e) => {
+                  const text = e.clipboardData?.getData("text");
+                  if (text) {
+                    e.preventDefault();
+                    setWalletAddress(text.trim());
+                  }
+                }}
                 placeholder="UQ... أو EQ..."
                 disabled={submitting}
                 dir="ltr"
@@ -239,18 +276,7 @@ export default function AccountPage() {
               <button
                 type="button"
                 disabled={submitting}
-                onClick={() => {
-                  const tg = (window as any).Telegram?.WebApp;
-                  if (tg?.readTextFromClipboard) {
-                    tg.readTextFromClipboard((text: string | null) => {
-                      if (text) setWalletAddress(text.trim());
-                    });
-                  } else {
-                    navigator.clipboard?.readText?.()
-                      .then((text) => { if (text) setWalletAddress(text.trim()); })
-                      .catch(() => {});
-                  }
-                }}
+                onClick={doPaste}
                 style={{
                   flexShrink: 0,
                   background: "rgba(255,255,255,0.12)",
