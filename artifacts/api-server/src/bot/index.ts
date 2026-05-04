@@ -101,8 +101,8 @@ const utf16Len = (s: string): number => {
   return n;
 };
 
-interface MsgPart { text: string; emojiId?: string }
-const buildMsg = (parts: MsgPart[]) => {
+export interface MsgPart { text: string; emojiId?: string }
+export const buildMsg = (parts: MsgPart[]) => {
   let text = "";
   let offset = 0;
   const entities: object[] = [];

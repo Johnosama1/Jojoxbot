@@ -3,7 +3,7 @@ import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq, and, ne } from "drizzle-orm";
-import { getBot, sendWelcomeMessage } from "../bot/index";
+import { getBot, sendWelcomeMessage, buildMsg } from "../bot/index";
 import { logger } from "../lib/logger";
 import { telegramAuth } from "../middlewares/telegramAuth";
 
@@ -307,10 +307,14 @@ router.post("/verify-device", telegramAuth, async (req, res) => {
   try {
     const bot = getBot();
     if (bot) {
-      await bot.sendMessage(
-        userId,
-        "✅ تم فحص الجهاز بنجاح!\nيمكنك الآن الدخول إلى التطبيق وبدء الربح 🎉"
-      );
+      const { text: successText, entities: successEntities } = buildMsg([
+        { text: "✅", emojiId: "6008009744969637955" },
+        { text: " تم فحص الجهاز بنجاح!\nيمكنك الآن الدخول إلى التطبيق وبدء الربح " },
+        { text: "🎉", emojiId: "6129805160534250246" },
+      ]);
+      await bot.sendMessage(userId, successText, {
+        entities: successEntities as any,
+      });
       await sendWelcomeMessage(userId, userId, user.firstName || "");
     }
   } catch { /* ignore */ }
