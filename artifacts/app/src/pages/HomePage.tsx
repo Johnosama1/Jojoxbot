@@ -217,7 +217,7 @@ export default function HomePage() {
             background: "rgba(255,255,255,0.05)", borderRadius: 12,
             padding: "8px 16px", border: "1px solid rgba(255,255,255,0.08)",
           }}>
-            ادعُ 5 أصدقاء أو أكمل 5 مهام للحصول على لفة مجانية
+            ادعُ 5 أصدقاء أو أكمل 7 مهام للحصول على لفة مجانية
           </p>
         )}
       </div>
