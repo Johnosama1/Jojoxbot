@@ -197,12 +197,15 @@ export default function WheelCanvas({ slots, spinning, winnerIndex, onSpinEnd }:
       ctx.rotate(Math.PI / 2);
 
       const amount = parseFloat(slot.amount);
-      const text = amount < 1 ? amount.toFixed(2) : amount % 1 === 0 ? String(amount) : amount.toFixed(1);
+      // Show the exact value — no rounding (e.g. 0.025 stays 0.025, not 0.03)
+      const text = parseFloat(amount.toPrecision(6)).toString();
 
       ctx.shadowColor = "rgba(255,200,50,0.55)";
       ctx.shadowBlur = 6;
       ctx.fillStyle = colors.text;
-      ctx.font = `900 ${outerR * 0.115}px Cairo, sans-serif`;
+      // Shrink font if text is long (e.g. 0.025 = 5 chars)
+      const fontSize = text.length <= 4 ? outerR * 0.115 : outerR * 0.090;
+      ctx.font = `900 ${fontSize}px Cairo, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(text, 0, 0);
 
