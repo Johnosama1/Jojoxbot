@@ -1,15 +1,16 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm --filter @workspace/api-server run build",
-  "outputDirectory": "artifacts/api-server/dist",
+  "installCommand": "pnpm install",
+  "framework": null,
   "functions": {
-    "artifacts/api-server/dist/vercel-entry.mjs": {
+    "api/index.js": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 30,
+      "runtime": "nodejs22.x"
     }
   },
   "routes": [
-    { "src": "/(.*)", "dest": "/artifacts/api-server/dist/vercel-entry.mjs" }
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
