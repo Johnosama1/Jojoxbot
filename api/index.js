@@ -1,4 +1,12 @@
-// Vercel serverless function — proxies all requests to the Express app
-// Built from artifacts/api-server/src/vercel-entry.ts
-import handler from "../artifacts/api-server/dist/vercel-entry.mjs";
-export default handler;
+// Vercel serverless function — CommonJS wrapper for the Express app
+// Uses dynamic import() to load the ESM module built from vercel-entry.ts
+
+let _app = null;
+
+module.exports = async function handler(req, res) {
+  if (!_app) {
+    const mod = await import("../artifacts/api-server/dist/vercel-entry.mjs");
+    _app = mod.default;
+  }
+  return _app(req, res);
+};
