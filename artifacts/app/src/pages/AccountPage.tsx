@@ -32,32 +32,31 @@ export default function AccountPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const walletInputRef = useRef<HTMLInputElement>(null);
 
+  // Write text into the uncontrolled input and sync React state
+  const setWalletValue = (text: string) => {
+    const trimmed = text.trim();
+    setWalletAddress(trimmed);
+    if (walletInputRef.current) walletInputRef.current.value = trimmed;
+  };
+
   const doPaste = () => {
     const tg = (window as any).Telegram?.WebApp;
-    // Method 1: Telegram API (v6.4+)
+    // Method 1: Telegram API (v6.4+) — shows native Telegram clipboard dialog
     if (tg?.readTextFromClipboard) {
-      tg.readTextFromClipboard((text: string | null) => {
-        if (text) setWalletAddress(text.trim());
+      tg.readTextFromClipboard((text: string) => {
+        if (text) setWalletValue(text);
       });
       return;
     }
-    // Method 2: focus input + execCommand (works in Android WebView)
-    const inp = walletInputRef.current;
-    if (inp) {
-      inp.focus();
-      try {
-        // @ts-ignore
-        document.execCommand("paste");
-        // Give React time to pick up the DOM change
-        setTimeout(() => {
-          if (inp.value) setWalletAddress(inp.value.trim());
-        }, 50);
-      } catch { /* ignore */ }
+    // Method 2: browser Clipboard API
+    if (navigator.clipboard?.readText) {
+      navigator.clipboard.readText()
+        .then((text) => { if (text) setWalletValue(text); })
+        .catch(() => {});
+      return;
     }
-    // Method 3: browser clipboard API fallback
-    navigator.clipboard?.readText?.()
-      .then((text) => { if (text) setWalletAddress(text.trim()); })
-      .catch(() => {});
+    // Method 3: focus input so user can long-press paste natively
+    walletInputRef.current?.focus();
   };
 
   useEffect(() => {
@@ -258,14 +257,14 @@ export default function AccountPage() {
               <input
                 ref={walletInputRef}
                 type="text"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
+                defaultValue=""
+                onInput={(e) => setWalletAddress((e.target as HTMLInputElement).value)}
                 onPaste={(e) => {
-                  const text = e.clipboardData?.getData("text");
-                  if (text) {
-                    e.preventDefault();
-                    setWalletAddress(text.trim());
-                  }
+                  // Let native paste happen, then sync state from DOM
+                  requestAnimationFrame(() => {
+                    const val = walletInputRef.current?.value ?? "";
+                    if (val) setWalletAddress(val.trim());
+                  });
                 }}
                 placeholder="UQ... أو EQ..."
                 disabled={submitting}
