@@ -1,11 +1,12 @@
 import { useLocation } from "wouter";
-import { Home, ListTodo, Users, User } from "lucide-react";
+import { Home, ListTodo, Users, User, Trophy } from "lucide-react";
 
 const tabs = [
-  { path: "/", icon: Home, label: "الرئيسية" },
-  { path: "/tasks", icon: ListTodo, label: "المهام" },
-  { path: "/referral", icon: Users, label: "الإحالة" },
-  { path: "/account", icon: User, label: "حسابي" },
+  { path: "/",            icon: Home,    label: "الرئيسية" },
+  { path: "/tasks",       icon: ListTodo, label: "المهام"  },
+  { path: "/referral",    icon: Users,   label: "الإحالة"  },
+  { path: "/leaderboard", icon: Trophy,  label: "المتصدرون" },
+  { path: "/account",     icon: User,    label: "حسابي"   },
 ];
 
 export default function TabBar() {
@@ -40,7 +41,6 @@ export default function TabBar() {
               className="flex flex-col items-center flex-1 py-2 relative transition-all active:scale-90"
               style={{ gap: 4, outline: "none", border: "none", background: "transparent" }}
             >
-              {/* Active top indicator */}
               {active && (
                 <span
                   style={{
@@ -59,8 +59,8 @@ export default function TabBar() {
 
               <div
                 style={{
-                  width: 40, height: 40,
-                  borderRadius: 14,
+                  width: 38, height: 38,
+                  borderRadius: 13,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 0.2s",
                   ...(active
@@ -76,16 +76,16 @@ export default function TabBar() {
                 }}
               >
                 <Icon
-                  size={20}
+                  size={18}
                   color={active ? "#fbbf24" : "rgba(255,255,255,0.38)"}
                   strokeWidth={active ? 2.5 : 1.8}
                 />
               </div>
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: active ? 800 : 500,
-                  letterSpacing: 0.3,
+                  letterSpacing: 0.2,
                   color: active ? "#fbbf24" : "rgba(255,255,255,0.35)",
                   transition: "color 0.2s",
                 }}

@@ -7,10 +7,11 @@ import AnimatedBackground from "./components/AnimatedBackground";
 import HomePage from "./pages/HomePage";
 import VerificationScreen from "./pages/VerificationScreen";
 
-const TasksPage    = lazy(() => import("./pages/TasksPage"));
-const ReferralPage = lazy(() => import("./pages/ReferralPage"));
-const AccountPage  = lazy(() => import("./pages/AccountPage"));
-const AdminPage    = lazy(() => import("./pages/AdminPage"));
+const TasksPage      = lazy(() => import("./pages/TasksPage"));
+const ReferralPage   = lazy(() => import("./pages/ReferralPage"));
+const AccountPage    = lazy(() => import("./pages/AccountPage"));
+const AdminPage      = lazy(() => import("./pages/AdminPage"));
+const LeaderboardPage = lazy(() => import("./pages/LeaderboardPage"));
 
 const queryClient = new QueryClient();
 
@@ -44,11 +45,12 @@ const PageFallback = () => (
 );
 
 const ROUTES = [
-  { path: "/",         Component: HomePage,    lazy: false },
-  { path: "/tasks",    Component: TasksPage,   lazy: true  },
-  { path: "/referral", Component: ReferralPage, lazy: true },
-  { path: "/account",  Component: AccountPage, lazy: true  },
-  { path: "/admin",    Component: AdminPage,   lazy: true  },
+  { path: "/",            Component: HomePage,       lazy: false },
+  { path: "/tasks",       Component: TasksPage,      lazy: true  },
+  { path: "/referral",    Component: ReferralPage,   lazy: true  },
+  { path: "/leaderboard", Component: LeaderboardPage, lazy: true },
+  { path: "/account",     Component: AccountPage,    lazy: true  },
+  { path: "/admin",       Component: AdminPage,      lazy: true  },
 ] as const;
 
 function PersistentRouter() {

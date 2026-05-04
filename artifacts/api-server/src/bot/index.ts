@@ -5,7 +5,7 @@ import {
   botSettingsTable,
   withdrawalsTable,
 } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, and, gt } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { executeAutoWithdrawal, isTonConfigured } from "../lib/withdrawalProcessor";
 import {
@@ -303,6 +303,73 @@ function setupBotHandlers() {
       await sendWelcomeMessage(chatId, userId, firstName);
     } catch (err) {
       logger.error({ err }, "Error in /start handler");
+    }
+  });
+
+  // ───────────────────────────── /top ───────────────────────────────
+  bot.onText(/^\/top$/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from!.id;
+    if (isCommandSpam(userId)) return;
+    try {
+      const top = await db
+        .select({
+          id: usersTable.id,
+          username: usersTable.username,
+          firstName: usersTable.firstName,
+          referralCount: usersTable.referralCount,
+        })
+        .from(usersTable)
+        .where(and(eq(usersTable.isVisible, true), gt(usersTable.referralCount, 0)))
+        .orderBy(desc(usersTable.referralCount))
+        .limit(10);
+
+      if (top.length === 0) {
+        await bot.sendMessage(chatId, "🏆 لا يوجد متصدرون بعد. كن أول المتصدرين!");
+        return;
+      }
+
+      const medals = ["🥇", "🥈", "🥉"];
+      const rows = top.map((u, i) => {
+        const medal = medals[i] ?? `${i + 1}.`;
+        const name = u.username ? `@${u.username}` : (u.firstName || "مستخدم");
+        return `${medal} ${name} — ${u.referralCount} إحالة`;
+      });
+
+      // Find current user's rank
+      let myLine = "";
+      const myPos = top.findIndex((u) => u.id === userId);
+      if (myPos >= 0) {
+        myLine = `\n\n🎯 أنت في المركز #${myPos + 1}`;
+      } else {
+        const [countRow] = await db
+          .select({ cnt: sql<number>`count(*)` })
+          .from(usersTable)
+          .where(
+            and(
+              eq(usersTable.isVisible, true),
+              sql`referral_count > (SELECT referral_count FROM users WHERE id = ${userId})`
+            )
+          );
+        const [me] = await db
+          .select({ referralCount: usersTable.referralCount })
+          .from(usersTable)
+          .where(eq(usersTable.id, userId))
+          .limit(1);
+        if (me && me.referralCount > 0) {
+          myLine = `\n\n🎯 ترتيبك: #${Number(countRow.cnt) + 1} (${me.referralCount} إحالة)`;
+        } else {
+          myLine = "\n\n💡 ادعُ أصدقاءك لتصعد في الترتيب!";
+        }
+      }
+
+      await bot.sendMessage(
+        chatId,
+        `🏆 *المتصدرون — أكثر المُحيلين*\n\n${rows.join("\n")}${myLine}`,
+        { parse_mode: "Markdown" }
+      );
+    } catch (err) {
+      logger.error({ err }, "Error in /top handler");
     }
   });
 

@@ -97,6 +97,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ deviceId }),
     }),
+
+  getLeaderboard: (userId?: number) =>
+    apiCall<{
+      top: Array<{
+        rank: number;
+        id: number;
+        username: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        referralCount: number;
+      }>;
+      myRank: { rank: number; referralCount: number } | null;
+    }>(`/leaderboard${userId ? `?userId=${userId}` : ""}`),
 };
 
 export interface User {

@@ -8,6 +8,7 @@ import adminRouter from "./admin";
 import stickerRouter from "./sticker";
 import verifyRouter from "./verify";
 import botRouter from "./bot";
+import leaderboardRouter from "./leaderboard";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use("/admin", adminRouter);
 router.use("/sticker", stickerRouter);
 router.use(verifyRouter);
 router.use(botRouter);
+router.use(leaderboardRouter);
 
 export default router;
