@@ -225,15 +225,36 @@ export default function AccountPage() {
             }}>
               عنوان محفظة TON
             </label>
-            <input
-              type="text"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              placeholder="UQ... أو EQ..."
-              disabled={!canWithdraw || submitting}
-              dir="ltr"
-              className="ton-input"
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="UQ... أو EQ..."
+                disabled={!canWithdraw || submitting}
+                dir="ltr"
+                className="ton-input"
+                style={{ paddingLeft: 64 }}
+              />
+              <button
+                type="button"
+                disabled={!canWithdraw || submitting}
+                onClick={async () => {
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    if (text) setWalletAddress(text.trim());
+                  } catch { /* ignore */ }
+                }}
+                style={{
+                  position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: 8, color: "#fff", fontSize: 12, padding: "4px 10px",
+                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                }}
+              >
+                لصق
+              </button>
+            </div>
           </div>
           <div>
             <label style={{
@@ -242,17 +263,33 @@ export default function AccountPage() {
             }}>
               المبلغ (TON)
             </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder={`${MIN_WITHDRAWAL}`}
-              step="0.01"
-              min={MIN_WITHDRAWAL}
-              max={balance}
-              disabled={!canWithdraw || submitting}
-              className="ton-input"
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder={`${MIN_WITHDRAWAL}`}
+                step="0.01"
+                min={MIN_WITHDRAWAL}
+                max={balance}
+                disabled={!canWithdraw || submitting}
+                className="ton-input"
+                style={{ paddingLeft: 64 }}
+              />
+              <button
+                type="button"
+                disabled={!canWithdraw || submitting}
+                onClick={() => setAmount(balance.toFixed(4))}
+                style={{
+                  position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)",
+                  background: "rgba(255,215,0,0.18)", border: "1px solid rgba(255,215,0,0.35)",
+                  borderRadius: 8, color: "#ffd700", fontSize: 12, padding: "4px 10px",
+                  cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                }}
+              >
+                الكل
+              </button>
+            </div>
           </div>
 
           {error && (
