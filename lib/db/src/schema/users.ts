@@ -19,6 +19,7 @@ export const usersTable = pgTable("users", {
   deviceId: text("device_id"),
   userAgent: text("user_agent"),
   verificationToken: text("verification_token"),
+  savedWalletAddress: text("saved_wallet_address"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

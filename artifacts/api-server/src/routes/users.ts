@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHash } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, wheelSlotsTable } from "@workspace/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { telegramAuth, spinRateLimit } from "../middlewares/telegramAuth";
 
 const router = Router();
@@ -102,6 +102,32 @@ router.post("/:id/spin", telegramAuth, spinRateLimit, async (req, res) => {
   const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, id)).limit(1);
   res.setHeader("Cache-Control", "no-store");
   res.json({ winner, user: updated, slotIndex: slots.findIndex(s => s.id === winner.id) });
+});
+
+// ── Save / update wallet address ────────────────────────────────────
+const TON_ADDRESS_RE = /^(EQ|UQ|kQ|0Q)[A-Za-z0-9_-]{46}$/;
+
+router.put("/:id/wallet", telegramAuth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const { walletAddress } = req.body;
+  if (!walletAddress) { res.status(400).json({ error: "walletAddress مطلوب" }); return; }
+
+  const clean = String(walletAddress).trim();
+  if (!TON_ADDRESS_RE.test(clean)) {
+    res.status(400).json({ error: "عنوان محفظة TON غير صحيح. يجب أن يبدأ بـ EQ أو UQ ويتكون من 48 حرفاً." });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({ savedWalletAddress: clean })
+    .where(eq(usersTable.id, id))
+    .returning();
+
+  if (!updated) { res.status(404).json({ error: "User not found" }); return; }
+  res.json({ savedWalletAddress: updated.savedWalletAddress });
 });
 
 export default router;

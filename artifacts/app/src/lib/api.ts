@@ -92,6 +92,12 @@ export const api = {
     apiCall<User>(`/admin/users/${userId}/balance`, { method: "PUT", body: JSON.stringify({ balance, spins }), headers: { "Content-Type": "application/json", "x-user-id": String(adminId) } }),
   adminGetWithdrawals: (userId: number) => apiCall<Withdrawal[]>("/admin/withdrawals", { headers: { "Content-Type": "application/json", "x-user-id": String(userId) } }),
 
+  saveWallet: (userId: number, walletAddress: string) =>
+    apiCall<{ savedWalletAddress: string }>(`/users/${userId}/wallet`, {
+      method: "PUT",
+      body: JSON.stringify({ walletAddress }),
+    }),
+
   verifyDevice: (deviceId: string) =>
     apiCall<{ success: boolean; alreadyVerified?: boolean }>("/verify-device", {
       method: "POST",
@@ -123,6 +129,7 @@ export interface User {
   referralCount: number;
   tasksCompleted: number;
   referredBy: number | null;
+  savedWalletAddress: string | null;
   createdAt: string;
   isVerified: boolean;
 }
