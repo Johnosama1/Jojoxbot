@@ -1,18 +1,6 @@
 {
   "version": 2,
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter ./artifacts/app run build",
-  "outputDirectory": "artifacts/app/dist/public",
-  "framework": null,
-  "functions": {
-    "api/index.js": {
-      "memory": 1024,
-      "maxDuration": 30,
-      "runtime": "nodejs22.x"
-    }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public"
 }
