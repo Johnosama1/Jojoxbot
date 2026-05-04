@@ -34,9 +34,7 @@ export default function AccountPage() {
   const walletInputRef = useRef<HTMLInputElement>(null);
 
   const setWalletValue = (text: string) => {
-    const trimmed = text.trim();
-    setWalletAddress(trimmed);
-    if (walletInputRef.current) walletInputRef.current.value = trimmed;
+    setWalletAddress(text.trim());
   };
 
   const doPaste = () => {
@@ -289,30 +287,13 @@ export default function AccountPage() {
               <input
                 ref={walletInputRef}
                 type="text"
-                defaultValue=""
-                onInput={(e) => setWalletAddress((e.target as HTMLInputElement).value)}
-                onPaste={(e) => {
-                  const text = e.clipboardData?.getData("text") ?? "";
-                  if (text) {
-                    e.preventDefault();
-                    setWalletValue(text);
-                  } else {
-                    requestAnimationFrame(() => {
-                      const val = walletInputRef.current?.value ?? "";
-                      if (val) setWalletValue(val);
-                    });
-                  }
-                }}
-                placeholder={pasteHint ? "اضغط مطولاً هنا ← لصق ✋" : "UQ... أو EQ..."}
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="UQ... أو EQ..."
                 disabled={submitting}
                 dir="ltr"
                 className="ton-input"
-                style={{
-                  flex: 1,
-                  borderColor: pasteHint ? "rgba(251,191,36,0.8)" : undefined,
-                  boxShadow: pasteHint ? "0 0 0 3px rgba(251,191,36,0.25)" : undefined,
-                  animation: pasteHint ? "pulse 0.8s ease-in-out infinite alternate" : undefined,
-                }}
+                style={{ flex: 1 }}
               />
               <button
                 type="button"
@@ -331,11 +312,6 @@ export default function AccountPage() {
                 لصق
               </button>
             </div>
-            {pasteHint && (
-              <p style={{ color: "#fbbf24", fontSize: 11, margin: "6px 0 0", textAlign: "right" }}>
-                اضغط مطولاً على الحقل ← اختر لصق
-              </p>
-            )}
           </div>
           <div>
             <label style={{
