@@ -112,12 +112,17 @@ router.put("/:id/wallet", telegramAuth, async (req, res) => {
   if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const { walletAddress } = req.body;
-  if (!walletAddress) { res.status(400).json({ error: "walletAddress مطلوب" }); return; }
 
-  const clean = String(walletAddress).trim();
-  if (!TON_ADDRESS_RE.test(clean)) {
-    res.status(400).json({ error: "عنوان محفظة TON غير صحيح. يجب أن يبدأ بـ EQ أو UQ ويتكون من 48 حرفاً." });
-    return;
+  // Allow empty string / null to clear the wallet
+  const clear = walletAddress === null || walletAddress === "" || walletAddress === undefined;
+
+  let clean: string | null = null;
+  if (!clear) {
+    clean = String(walletAddress).trim();
+    if (!TON_ADDRESS_RE.test(clean)) {
+      res.status(400).json({ error: "عنوان محفظة TON غير صحيح. يجب أن يبدأ بـ EQ أو UQ ويتكون من 48 حرفاً." });
+      return;
+    }
   }
 
   const [updated] = await db

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "../lib/userContext";
 import { api, Withdrawal, getWithdrawalsOnce, invalidateUserCaches } from "../lib/api";
 import { useTonAddress, useTonConnectUI } from "@tonconnect/ui-react";
-import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList, Pencil, Link } from "lucide-react";
+import { Wallet, Send, CheckCircle, Coins, Clock, ClipboardList, Pencil, Link, LogOut } from "lucide-react";
 
 const MIN_WITHDRAWAL = 0.1;
 
@@ -30,12 +30,13 @@ export default function AccountPage() {
   const connectedAddress = useTonAddress(); // raw bounceable address from wallet
 
   // ── Wallet sync: whenever TON Connect gives us an address, auto-save it ──
-  const [syncing, setSyncing]   = useState(false);
-  const [syncDone, setSyncDone] = useState(false);
+  const [syncing, setSyncing]       = useState(false);
+  const [syncDone, setSyncDone]     = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
 
   useEffect(() => {
     if (!connectedAddress || !user) return;
-    // Only save if different from what's already stored
     if (connectedAddress === user.savedWalletAddress) return;
     setSyncing(true);
     api.saveWallet(user.id, connectedAddress)
@@ -44,6 +45,21 @@ export default function AccountPage() {
       .catch(() => {})
       .finally(() => setSyncing(false));
   }, [connectedAddress, user?.id]);
+
+  const handleDisconnect = async () => {
+    if (!user || disconnecting) return;
+    setDisconnecting(true);
+    setConfirmDisconnect(false);
+    try {
+      await tonConnectUI.disconnect();
+      await api.saveWallet(user.id, "");
+      await refresh();
+    } catch {
+      // swallow
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   // ── Withdrawal ──────────────────────────────────────────────────────
   const [amount, setAmount]         = useState("");
@@ -192,28 +208,14 @@ export default function AccountPage() {
           <span style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>
             {savedWallet ? "محفظتك المرتبطة" : "ربط محفظة TON"}
           </span>
-          {savedWallet && (
-            <button
-              onClick={() => tonConnectUI.openModal()}
-              style={{
-                marginRight: "auto",
-                display: "flex", alignItems: "center", gap: 5,
-                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
-                borderRadius: 10, padding: "5px 12px", cursor: "pointer",
-                color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "inherit",
-              }}
-            >
-              <Pencil size={12} /> تغيير
-            </button>
-          )}
         </div>
 
-        {/* Saved wallet */}
+        {/* Saved wallet display */}
         {savedWallet && (
           <div style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.20)",
-            borderRadius: 14, padding: "12px 14px",
+            borderRadius: 14, padding: "12px 14px", marginBottom: 12,
           }}>
             <Wallet size={16} color="#10b981" style={{ flexShrink: 0 }} />
             <span style={{
@@ -224,6 +226,81 @@ export default function AccountPage() {
               {maskWallet(savedWallet)}
             </span>
             <CheckCircle size={15} color="#10b981" style={{ flexShrink: 0 }} />
+          </div>
+        )}
+
+        {/* Action buttons — change / disconnect */}
+        {savedWallet && !disconnecting && !confirmDisconnect && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => tonConnectUI.openModal()}
+              style={{
+                flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 12, padding: "11px 14px", cursor: "pointer",
+                color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "inherit", fontWeight: 700,
+              }}
+            >
+              <Pencil size={13} /> تغيير المحفظة
+            </button>
+            <button
+              onClick={() => setConfirmDisconnect(true)}
+              style={{
+                flex: 1,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                background: "rgba(248,113,113,0.10)", border: "1px solid rgba(248,113,113,0.25)",
+                borderRadius: 12, padding: "11px 14px", cursor: "pointer",
+                color: "#f87171", fontSize: 13, fontFamily: "inherit", fontWeight: 700,
+              }}
+            >
+              <LogOut size={13} /> فصل المحفظة
+            </button>
+          </div>
+        )}
+
+        {/* Confirm disconnect */}
+        {confirmDisconnect && !disconnecting && (
+          <div style={{
+            background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.28)",
+            borderRadius: 14, padding: "14px",
+          }}>
+            <p style={{ color: "#fca5a5", fontSize: 13, margin: "0 0 12px", textAlign: "center", lineHeight: 1.5 }}>
+              هل أنت متأكد؟ سيتم إزالة ربط المحفظة وستحتاج لإعادة الربط من جديد.
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setConfirmDisconnect(false)}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 10, cursor: "pointer",
+                  background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
+                  color: "rgba(255,255,255,0.65)", fontSize: 13, fontFamily: "inherit", fontWeight: 700,
+                }}
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleDisconnect}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 10, cursor: "pointer",
+                  background: "rgba(248,113,113,0.18)", border: "1px solid rgba(248,113,113,0.35)",
+                  color: "#f87171", fontSize: 13, fontFamily: "inherit", fontWeight: 800,
+                }}
+              >
+                نعم، افصل
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Disconnecting loader */}
+        {disconnecting && (
+          <div style={{
+            background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.20)",
+            borderRadius: 12, padding: "12px 14px",
+            color: "#f87171", fontSize: 13, textAlign: "center",
+          }}>
+            جاري فصل المحفظة...
           </div>
         )}
 
