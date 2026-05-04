@@ -33,6 +33,31 @@ export default function AccountPage() {
   const [pasteHint, setPasteHint] = useState(false);
   const walletInputRef = useRef<HTMLInputElement>(null);
 
+  // Native DOM paste listener — bypasses React event delegation which
+  // Android WebView sometimes blocks for clipboard operations.
+  useEffect(() => {
+    const inp = walletInputRef.current;
+    if (!inp) return;
+    const handler = (e: ClipboardEvent) => {
+      const text = (
+        e.clipboardData?.getData("text/plain") ||
+        e.clipboardData?.getData("text") ||
+        ""
+      ).trim();
+      if (text) {
+        e.preventDefault();
+        setWalletAddress(text);
+      } else {
+        // clipboardData empty: let browser insert, then read DOM value
+        setTimeout(() => {
+          if (inp.value) setWalletAddress(inp.value.trim());
+        }, 50);
+      }
+    };
+    inp.addEventListener("paste", handler);
+    return () => inp.removeEventListener("paste", handler);
+  }, []);
+
   const setWalletValue = (text: string) => {
     setWalletAddress(text.trim());
   };
@@ -289,28 +314,6 @@ export default function AccountPage() {
                 type="text"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                onPaste={(e) => {
-                  // Android WebView often skips the input event after paste.
-                  // Explicitly read clipboard data from the paste event object.
-                  const cd = e.clipboardData;
-                  const text = (
-                    cd?.getData("text/plain") ||
-                    cd?.getData("text") ||
-                    ""
-                  ).trim();
-                  if (text) {
-                    e.preventDefault();
-                    setWalletAddress(text);
-                  }
-                  // If clipboardData is empty, let default paste run and
-                  // sync state from DOM on next frame.
-                  if (!text) {
-                    requestAnimationFrame(() => {
-                      const v = walletInputRef.current?.value ?? "";
-                      if (v) setWalletAddress(v.trim());
-                    });
-                  }
-                }}
                 placeholder="UQ... أو EQ..."
                 disabled={submitting}
                 dir="ltr"
