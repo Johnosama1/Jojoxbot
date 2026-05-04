@@ -155,7 +155,10 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
           textAlign: "center",
           boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(239,68,68,0.1)",
         }}>
-          <div style={{ fontSize: 72, marginBottom: 16 }}>🚫</div>
+          <div style={{ fontSize: 72, marginBottom: 16 }}>
+            {/* @ts-ignore */}
+            <tg-emoji emoji-id="6132089060933505983">🚫</tg-emoji>
+          </div>
           <h2 style={{ color: "#ef4444", fontSize: 20, fontWeight: 900, margin: "0 0 12px" }}>
             تم اكتشاف تعدد الحسابات
           </h2>
@@ -167,11 +170,22 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
             marginBottom: 20,
             textAlign: "right",
           }}>
-            <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, lineHeight: 1.8, margin: 0 }}>
-              🔴 تم رصد استخدام هذا الجهاز مع حساب آخر.<br />
-              🚫 تم حظر هذا الحساب تلقائياً.<br />
-              ℹ️ كل جهاز يسمح بحساب واحد فقط.
-            </p>
+            {[
+              { id: "6127546183830212440", fallback: "🛑", text: " تم رصد استخدام هذا الجهاز مع حساب آخر." },
+              { id: "6132089060933505983", fallback: "🚫", text: " تم حظر هذا الحساب تلقائياً." },
+              { id: "5420323339723881652", fallback: "⚠️", text: " كل جهاز يسمح بحساب واحد فقط." },
+            ].map(({ id, fallback, text }) => (
+              <div key={id} style={{
+                display: "flex", alignItems: "center", gap: 8,
+                marginBottom: 8, fontSize: 13, color: "rgba(255,255,255,0.75)",
+              }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>
+                  {/* @ts-ignore */}
+                  <tg-emoji emoji-id={id}>{fallback}</tg-emoji>
+                </span>
+                <span>{text}</span>
+              </div>
+            ))}
           </div>
           <div style={{
             background: "rgba(239,68,68,0.08)",
@@ -181,7 +195,9 @@ export default function VerificationScreen({ firstName, onVerified, onBanned }: 
             color: "rgba(255,255,255,0.4)",
             fontSize: 13,
           }}>
-            🔄 سيتم إغلاق النافذة خلال {countdown} ثوانٍ...
+            {/* @ts-ignore */}
+            <tg-emoji emoji-id="5375338737028841420">🔄</tg-emoji>
+            {" "}سيتم إغلاق النافذة خلال {countdown} ثوانٍ...
           </div>
         </div>
       </div>
