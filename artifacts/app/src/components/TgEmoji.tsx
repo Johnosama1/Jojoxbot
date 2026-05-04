@@ -1,9 +1,24 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import lottie, { type AnimationItem } from "lottie-web";
+/**
+ * TgEmoji — renders a Telegram Premium custom emoji.
+ *
+ * Inside a real Telegram Mini App the native <tg-emoji> web component
+ * is supported and renders the animated sticker automatically.
+ * Outside Telegram (browser preview) we fall back to the static PNG URL.
+ *
+ * Usage:
+ *   <TgEmoji id="5226711870492126219" fallback="🎡" size={32} />
+ */
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "") + "/api";
-
-type Format = "lottie" | "webm" | "failed" | "loading";
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "tg-emoji": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & { "emoji-id"?: string },
+        HTMLElement
+      >;
+    }
+  }
+}
 
 interface TgEmojiProps {
   id: string;
@@ -12,102 +27,53 @@ interface TgEmojiProps {
   style?: React.CSSProperties;
 }
 
+const isTelegram =
+  typeof window !== "undefined" &&
+  !!(window as unknown as { Telegram?: { WebApp?: unknown } }).Telegram?.WebApp;
+
 export default function TgEmoji({ id, fallback, size = 24, style }: TgEmojiProps) {
-  const [format, setFormat] = useState<Format>("loading");
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [lottieData, setLottieData] = useState<object | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const animRef = useRef<AnimationItem | null>(null);
+  const base: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: size,
+    height: size,
+    flexShrink: 0,
+    verticalAlign: "middle",
+    ...style,
+  };
 
-  useEffect(() => {
-    let cancelled = false;
-    setFormat("loading");
-    setVideoUrl(null);
-    setLottieData(null);
+  if (isTelegram) {
+    return (
+      <span style={base}>
+        <tg-emoji emoji-id={id}>{fallback}</tg-emoji>
+      </span>
+    );
+  }
 
-    fetch(`${API_BASE}/sticker/${id}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Not ok");
-        const ct = res.headers.get("Content-Type") ?? "";
-
-        if (ct.includes("video/webm")) {
-          const buf = await res.arrayBuffer();
-          if (cancelled) return;
-          const blob = new Blob([buf], { type: "video/webm" });
-          setVideoUrl(URL.createObjectURL(blob));
-          setFormat("webm");
-        } else if (ct.includes("application/json")) {
-          const json = await res.json();
-          if (cancelled) return;
-          setLottieData(json);
-          setFormat("lottie");
-        } else {
-          if (!cancelled) setFormat("failed");
-        }
-      })
-      .catch(() => { if (!cancelled) setFormat("failed"); });
-
-    return () => { cancelled = true; };
-  }, [id]);
-
-  // useLayoutEffect runs synchronously AFTER DOM mutations — guarantees
-  // containerRef.current is set before we try to mount lottie into it.
-  useLayoutEffect(() => {
-    if (format !== "lottie" || !lottieData || !containerRef.current) return;
-
-    animRef.current?.destroy();
-    animRef.current = null;
-
-    const anim = lottie.loadAnimation({
-      container: containerRef.current,
-      renderer: "svg",      // SVG is more reliable in Android WebView than canvas
-      loop: true,
-      autoplay: false,       // we call play() manually below
-      animationData: lottieData,
-    });
-
-    // Explicit play() after a tick — ensures WebView has finished layout
-    const t = setTimeout(() => { anim.play(); }, 0);
-    animRef.current = anim;
-
-    return () => {
-      clearTimeout(t);
-      anim.destroy();
-      animRef.current = null;
-    };
-  }, [format, lottieData]);
-
-  useEffect(() => {
-    return () => { if (videoUrl) URL.revokeObjectURL(videoUrl); };
-  }, [videoUrl]);
-
-  const fallbackEl = (
-    <span style={{ fontSize: size * 0.85, lineHeight: 1, display: "inline-block", ...style }}>
-      {fallback}
-    </span>
+  // Browser fallback — static PNG from Telegram CDN
+  return (
+    <img
+      src={`https://t.me/i/emoji/${id}.png`}
+      alt={fallback}
+      width={size}
+      height={size}
+      style={{
+        display: "inline-block",
+        verticalAlign: "middle",
+        objectFit: "contain",
+        flexShrink: 0,
+        ...style,
+      }}
+      onError={(e) => {
+        // If CDN image fails, show text fallback
+        const el = e.currentTarget;
+        el.style.display = "none";
+        const span = document.createElement("span");
+        span.textContent = fallback;
+        span.style.fontSize = `${size * 0.85}px`;
+        el.parentElement?.appendChild(span);
+      }}
+    />
   );
-
-  if (format === "failed") return fallbackEl;
-
-  if (format === "webm" && videoUrl) {
-    return (
-      <video
-        src={videoUrl}
-        autoPlay loop muted playsInline
-        width={size} height={size}
-        style={{ display: "inline-block", objectFit: "contain", ...style }}
-      />
-    );
-  }
-
-  if (format === "lottie") {
-    return (
-      <div
-        ref={containerRef}
-        style={{ width: size, height: size, display: "inline-block", lineHeight: 0, ...style }}
-      />
-    );
-  }
-
-  return fallbackEl;
 }

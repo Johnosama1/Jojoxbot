@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "../lib/api";
+import TgEmoji from "../components/TgEmoji";
 
 const STYLES = `
 @keyframes vf-fadein {
@@ -108,15 +109,6 @@ async function collectDeviceFingerprint(): Promise<string> {
 function closeMiniApp() {
   const tg = (window as unknown as { Telegram?: { WebApp?: { close(): void } } }).Telegram?.WebApp;
   if (tg) tg.close();
-}
-
-function TgEmoji({ id, fallback, size = 22 }: { id: string; fallback: string; size?: number }) {
-  return (
-    <span style={{ fontSize: size, display: "inline-flex", alignItems: "center" }}>
-      {/* @ts-ignore */}
-      <tg-emoji emoji-id={id}>{fallback}</tg-emoji>
-    </span>
-  );
 }
 
 interface Props {
